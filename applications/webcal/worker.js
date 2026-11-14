@@ -53,6 +53,7 @@ export default {
       );
     }
 
-    return withCors(await env.ASSETS.fetch(request));
+    const response = await env.ASSETS.fetch(request);
+    return withCors(response);
   },
 };
