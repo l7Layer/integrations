@@ -34,7 +34,11 @@ does not upload local `.ics` files, edit events, or provide two-way synchronizat
 
 `view`, `locale`, `timeZone`, `dayRange`, `maxEvents`, `highlightToday`, `highlightScale`, and
 `showLocation` are handled by `@paperlesspaper/openintegration`. Supported views are `agenda`,
-`day`, `three-days`, `week`, and `year`.
+`day`, `three-days`, `week`, `rolling-week`, and `year`.
+
+The rolling calendar keeps its seven-day horizontal layout on landscape displays. On portrait
+displays it shows today and the next four days in one horizontal row, retaining the hourly grid,
+event blocks, and today's underline.
 
 The shared iCalendar parser supports folded text, date-only and timed events, embedded timezone
 definitions, recurrence rules and dates, exclusions, moved occurrences, cancellations, and

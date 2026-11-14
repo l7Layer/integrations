@@ -81,6 +81,99 @@
         background-color: #fff !important;
         color: #111 !important;
       }
+
+      .pp-cal--view-rolling-week .pp-cal-week {
+        --pp-cal-gutter: calc(
+          clamp(64px, 6vw, 88px) * 1.15 * var(--pp-cal-font-scale, 1) *
+            var(--webcal-time-scale, 1)
+        );
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-week-heading {
+        font-size: clamp(
+          0.9em,
+          calc(1em * var(--webcal-time-scale, 1)),
+          1.2em
+        );
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-rolling-number {
+        font-size: clamp(
+          1.8em,
+          calc(2.2em * var(--webcal-time-scale, 1)),
+          2.6em
+        );
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-week-slot .pp-cal-event-title,
+      .pp-cal--view-rolling-week .pp-cal-week-all-day .pp-cal-event-title {
+        font-size: clamp(
+          0.78em,
+          calc(0.92em * var(--webcal-time-scale, 1)),
+          1.15em
+        );
+        overflow-wrap: anywhere;
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-week-slot .pp-cal-event-time {
+        font-size: clamp(
+          0.7em,
+          calc(0.85em * var(--webcal-time-scale, 1)),
+          1em
+        );
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-hour,
+      .pp-cal--view-rolling-week .pp-cal-week-all-day-label {
+        font-size: clamp(
+          0.65em,
+          calc(0.75em * var(--webcal-time-scale, 1)),
+          0.95em
+        ) !important;
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-week-all-day-label {
+        align-self: center;
+        padding-right: 6px;
+        font-family: Georgia, "Times New Roman", serif !important;
+        font-weight: 600 !important;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      @media (orientation: landscape) and (max-width: 900px) {
+        .pp-cal--view-rolling-week {
+          --pp-cal-edge-x: 7px;
+        }
+      }
+
+      /* Portrait keeps the first five rolling days in one readable row. */
+      @media (orientation: portrait) {
+        .pp-cal--view-rolling-week .pp-cal-rolling-grid-wide {
+          display: block !important;
+        }
+
+        .pp-cal--view-rolling-week .pp-cal-rolling-grid-stacked {
+          display: none !important;
+        }
+
+        .pp-cal--view-rolling-week .pp-cal-week {
+          --pp-cal-days: 5 !important;
+        }
+
+        .pp-cal--view-rolling-week .pp-cal-week-head > .pp-cal-week-heading:nth-child(n + 7),
+        .pp-cal--view-rolling-week .pp-cal-week-all-day > .pp-cal-week-all-day-events:nth-child(n + 7),
+        .pp-cal--view-rolling-week .pp-cal-week-grid > .pp-cal-week-cell:nth-child(n + 7),
+        .pp-cal--view-rolling-week .pp-cal-week-overflow > .pp-cal-more:nth-child(n + 7) {
+          display: none !important;
+        }
+
+        .pp-cal--view-rolling-week .pp-cal-week-head > .pp-cal-week-heading:nth-child(6),
+        .pp-cal--view-rolling-week .pp-cal-week-all-day > .pp-cal-week-all-day-events:nth-child(6),
+        .pp-cal--view-rolling-week .pp-cal-week-grid > .pp-cal-week-cell:nth-child(6) {
+          border-right: 1px solid #aaa !important;
+        }
+      }
     </style>
   </head>
 
@@ -88,7 +181,14 @@
     <div id="website-has-loading-element"></div>
     <main id="app" aria-live="polite"></main>
 
-    <script>
+    <script type="module">
+      import {
+        calculateTypographyScale,
+        calculateWeekTimeRange,
+        formatHourLabel,
+        getTimedEventSlots,
+      } from "./assets/calendar-layout.js";
+
       (() => {
         const { bootCalendarApiIntegration } =
           window.PaperlessOpenIntegration;
@@ -121,11 +221,158 @@
             : fallback;
         }
 
+        let calendarRange;
+        let calendarLocale = defaults.locale;
+        let calendarTimeZone = defaults.timeZone;
+        let calendarEvents = [];
+
+        function setStyle(element, property, value) {
+          if (element.style.getPropertyValue(property) !== value) {
+            element.style.setProperty(property, value);
+          }
+        }
+
+        function applyDynamicTimeRange() {
+          for (const week of app.querySelectorAll(
+            ".pp-cal--view-rolling-week .pp-cal-rolling-grid-wide .pp-cal-week",
+          )) {
+            const cells = Array.from(
+              week.querySelectorAll(".pp-cal-week-grid > .pp-cal-week-cell"),
+            );
+            const visibleCells = cells.filter(
+              (cell) => getComputedStyle(cell).display !== "none",
+            );
+            const allSlots = getTimedEventSlots(
+              calendarEvents,
+              calendarRange.dateKeys,
+              calendarTimeZone,
+            );
+            const visibleSlots = getTimedEventSlots(
+              calendarEvents,
+              visibleCells.map((cell) => cell.dataset.date),
+              calendarTimeZone,
+            );
+            const { startHour, endHour } = calculateWeekTimeRange(
+              allSlots,
+              visibleSlots,
+            );
+            const visibleDates = visibleCells
+              .map((cell) => cell.dataset.date)
+              .join(",");
+            const signature = `${startHour}-${endHour}-${visibleDates}`;
+            if (week.dataset.webcalTimeRange === signature) continue;
+
+            const durationHours = endHour - startHour;
+            const scale = calculateTypographyScale(durationHours);
+            setStyle(week, "--pp-cal-hours", String(durationHours));
+            setStyle(week, "--webcal-time-scale", String(scale));
+
+            const labelsContainer = week.querySelector(".pp-cal-week-hours");
+            const labels = Array.from(
+              labelsContainer.querySelectorAll(".pp-cal-hour"),
+            );
+            const labelTemplate = labels[0];
+            const labelCount = durationHours + 1;
+            while (labels.length > labelCount) {
+              labels.pop().remove();
+            }
+            while (labels.length < labelCount) {
+              labels.push(labelTemplate.cloneNode(true));
+              labelsContainer.append(labels.at(-1));
+            }
+            labels.forEach((label, index) => {
+              const hour = startHour + index;
+              const top = `${(index / durationHours) * 100}%`;
+              const text = formatHourLabel(hour, calendarLocale);
+              if (label.textContent !== text) label.textContent = text;
+              if (label.style.top !== top) label.style.top = top;
+            });
+
+            for (const cell of cells) {
+              const rules = Array.from(
+                cell.querySelectorAll(":scope > .pp-cal-hour-rule"),
+              );
+              const ruleTemplate = rules[0];
+              while (rules.length > durationHours) {
+                rules.pop().remove();
+              }
+              while (rules.length < durationHours) {
+                rules.push(ruleTemplate.cloneNode(true));
+                cell.insertBefore(
+                  rules.at(-1),
+                  cell.querySelector(".pp-cal-week-slot"),
+                );
+              }
+              rules.forEach((rule, index) => {
+                const top = `${(index / durationHours) * 100}%`;
+                if (rule.style.top !== top) rule.style.top = top;
+              });
+
+              for (const slot of cell.querySelectorAll(".pp-cal-week-slot")) {
+                const start = Number(slot.dataset.start);
+                const end = Number(slot.dataset.end);
+                const top = `${((start - startHour * 60) / (durationHours * 60)) * 100}%`;
+                const height = `${((end - start) / (durationHours * 60)) * 100}%`;
+                if (slot.style.top !== top) slot.style.top = top;
+                if (slot.style.height !== height) slot.style.height = height;
+              }
+            }
+
+            week.dataset.webcalTimeRange = signature;
+          }
+        }
+
+        function formatRangeTitle(range, locale) {
+          const [startYear, startMonth, startDay] = range.startKey
+            .split("-")
+            .map(Number);
+          const [endYear, endMonth, endDay] = range.endKey
+            .split("-")
+            .map(Number);
+          const inclusiveEnd = new Date(
+            Date.UTC(endYear, endMonth - 1, endDay - 1),
+          );
+          const lastYear = inclusiveEnd.getUTCFullYear();
+          const lastMonth = inclusiveEnd.getUTCMonth() + 1;
+          const lastDay = inclusiveEnd.getUTCDate();
+          const monthName = (year, month) =>
+            new Intl.DateTimeFormat(locale, {
+              month: "long",
+              timeZone: "UTC",
+            }).format(new Date(Date.UTC(year, month - 1, 1)));
+          const firstMonthName = monthName(startYear, startMonth);
+          const lastMonthName = monthName(lastYear, lastMonth);
+
+          if (startYear === lastYear && startMonth === lastMonth) {
+            return `${startDay} – ${lastDay} ${lastMonthName}`;
+          }
+          if (startYear === lastYear) {
+            return `${startDay} ${firstMonthName} – ${lastDay} ${lastMonthName}`;
+          }
+          return `${startDay} ${firstMonthName} ${startYear} – ${lastDay} ${lastMonthName} ${lastYear}`;
+        }
+
+        const app = document.querySelector("#app");
+        new MutationObserver(() => {
+          const heading = app.querySelector(".pp-cal-range-title");
+          if (!heading || !calendarRange) return;
+
+          const title = formatRangeTitle(calendarRange, calendarLocale);
+          if (heading.textContent !== title) {
+            heading.textContent = title;
+          }
+          applyDynamicTimeRange();
+        }).observe(app, { childList: true, subtree: true });
+        window.addEventListener("resize", applyDynamicTimeRange);
+
         window.__paperlessRenderDone = bootCalendarApiIntegration({
           defaults,
           fallbackTitle: "Family Calendar",
 
           buildRequest({ mergedSettings, range, settings }) {
+            calendarRange = range;
+            calendarLocale = settings.locale;
+            calendarTimeZone = settings.timeZone;
             return {
               feedUrl: mergedSettings.feedUrl,
               username: mergedSettings.username,
@@ -141,13 +388,11 @@
           },
 
           resolveHeader({ data, mergedSettings, messages }) {
+            calendarEvents = Array.isArray(data.events) ? data.events : [];
             return {
               kicker: text(messages.kicker, "Calendar"),
               title: text(mergedSettings.title, "Family Calendar"),
               subtitle: text(data.calendarName),
-              source: data.sample
-                ? text(messages.sampleSource, "Sample data")
-                : text(messages.source, "WebCal / iCalendar"),
             };
           },
         });
