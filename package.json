@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@fontsource/open-sans": "5.2.7",
-    "@paperlesspaper/openintegration": "0.2.0",
+    "@paperlesspaper/openintegration": "git+https://github.com/l7Layer/openintegration.git#0f38947f2e6786f3cb54ae50e235ae8236a947e5",
     "express": "^4.19.2",
     "fast-xml-parser": "^5.11.1",
     "suncalc": "^2.0.2"
