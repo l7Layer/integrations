@@ -83,9 +83,9 @@
       "view": {
         "type": "string",
         "title": "View",
-        "enum": ["agenda", "day", "three-days", "week", "year"],
-        "enumNames": ["Agenda", "Day", "3 days", "Week", "Year"],
-        "default": "agenda"
+        "enum": ["agenda", "day", "three-days", "week", "rolling-week", "year"],
+        "enumNames": ["Agenda", "Day", "3 days", "Week", "Rolling 7 days", "Year"],
+        "default": "rolling-week"
       },
       "locale": {
         "type": "string",
