@@ -13,7 +13,7 @@
     "username": "",
     "password": "",
     "allowHttp": false,
-    "view": "agenda",
+    "view": "rolling-week"
     "locale": "en-GB",
     "timeZone": "Europe/Berlin",
     "dayRange": 14,
