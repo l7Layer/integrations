@@ -1,35 +1,113 @@
+
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="paperless:epd-optimize" content='{"intent":"readable"}' />
-    <title>Webcal &amp; iCalendar</title>
+    <title>WebCal Rolling Week</title>
+
     <link rel="stylesheet" href="/assets/paperless.css?v=0.1.3-calendar-api" />
     <script src="/assets/paperless.iife.js?v=0.1.3-calendar-api"></script>
+
+    <style>
+      /* Overall typography */
+      body,
+      #app,
+      .pp-cal--view-rolling-week {
+        font-family: Georgia, "Times New Roman", serif !important;
+        color: #111 !important;
+      }
+
+      /* Calendar headings */
+      .pp-cal--view-rolling-week .pp-cal-title,
+      .pp-cal--view-rolling-week .pp-cal-subtitle,
+      .pp-cal--view-rolling-week .pp-cal-week-heading {
+        font-family: Georgia, "Times New Roman", serif !important;
+        font-weight: normal !important;
+      }
+
+      /* Day headings */
+      .pp-cal--view-rolling-week .pp-cal-week-heading {
+        background: #fff !important;
+        color: #111 !important;
+        border-bottom: 1px solid #555 !important;
+      }
+
+      /* Today: subtle underline, no filled background */
+      .pp-cal--view-rolling-week .pp-cal-week-heading.is-today {
+        background: #fff !important;
+        color: #111 !important;
+        box-shadow: inset 0 -2px #111 !important;
+      }
+
+      /* Calendar grid */
+      .pp-cal--view-rolling-week .pp-cal-week-cell,
+      .pp-cal--view-rolling-week .pp-cal-week-all-day-events {
+        border-color: #aaa !important;
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-hour-rule {
+        border-top: 1px solid #ddd !important;
+      }
+
+      /* Events: white background, thin outline */
+      .pp-cal--view-rolling-week .pp-cal-week-slot .pp-cal-event,
+      .pp-cal--view-rolling-week .pp-cal-week-all-day .pp-cal-event {
+        background: #fff !important;
+        background-color: #fff !important;
+        color: #111 !important;
+        border: 1px solid #333 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+      }
+
+      /* Event text */
+      .pp-cal--view-rolling-week .pp-cal-event-title {
+        font-family: Georgia, "Times New Roman", serif !important;
+        font-weight: normal !important;
+        color: #111 !important;
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-event-time {
+        font-family: Georgia, "Times New Roman", serif !important;
+        font-size: 0.85em !important;
+        color: #333 !important;
+      }
+
+      /* Remove coloured event indicators */
+      .pp-cal--view-rolling-week .has-source-color {
+        background: #fff !important;
+        background-color: #fff !important;
+        color: #111 !important;
+      }
+    </style>
   </head>
+
   <body>
     <div id="website-has-loading-element"></div>
     <main id="app" aria-live="polite"></main>
 
     <script>
       (() => {
-        const { bootCalendarApiIntegration } = window.PaperlessOpenIntegration;
+        const { bootCalendarApiIntegration } =
+          window.PaperlessOpenIntegration;
+
         const defaults = {
           color: "light",
-          title: "Webcal & iCalendar",
+          title: "Family Calendar",
           feedUrl:
             "https://demo.digital-peak.com/dpc/index.php?option=com_dpcalendar&task=ical.download&format=raw&id=494",
           username: "",
           password: "",
           allowHttp: false,
-          view: "agenda",
-          locale: "en-GB",
+          view: "rolling-week",
+          locale: "de-DE",
           timeZone: "Europe/Berlin",
-          dayRange: 14,
+          dayRange: 7,
           maxEvents: 30,
           highlightToday: true,
-          highlightScale: 1.2,
+          highlightScale: 1,
           showLocation: true,
           showEventIcons: false,
           showEventImages: false,
@@ -38,12 +116,15 @@
         };
 
         function text(value, fallback = "") {
-          return typeof value === "string" && value.trim() ? value.trim() : fallback;
+          return typeof value === "string" && value.trim()
+            ? value.trim()
+            : fallback;
         }
 
         window.__paperlessRenderDone = bootCalendarApiIntegration({
           defaults,
-          fallbackTitle: "Webcal & iCalendar",
+          fallbackTitle: "Family Calendar",
+
           buildRequest({ mergedSettings, range, settings }) {
             return {
               feedUrl: mergedSettings.feedUrl,
@@ -58,14 +139,15 @@
               now: mergedSettings.now,
             };
           },
+
           resolveHeader({ data, mergedSettings, messages }) {
             return {
-              kicker: text(messages.kicker, "Calendar feed"),
-              title: text(mergedSettings.title, "Webcal & iCalendar"),
+              kicker: text(messages.kicker, "Calendar"),
+              title: text(mergedSettings.title, "Family Calendar"),
               subtitle: text(data.calendarName),
               source: data.sample
                 ? text(messages.sampleSource, "Sample data")
-                : text(messages.source, "Webcal / iCalendar"),
+                : text(messages.source, "WebCal / iCalendar"),
             };
           },
         });
