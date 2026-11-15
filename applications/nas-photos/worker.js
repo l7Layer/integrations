@@ -3,11 +3,11 @@ const API = "https://api.paperlesspaper.de/v1";
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "access-control-allow-origin": "*", "access-control-allow-methods": "GET, POST, OPTIONS", "access-control-allow-headers": "content-type, authorization, x-photo-message-id" }
   });
 }
 function html(body) {
-  return new Response(body, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+  return new Response(body, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "access-control-allow-origin": "*" } });
 }
 function equalSecret(a, b) {
   if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
@@ -61,6 +61,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
+    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "access-control-allow-origin": "*", "access-control-allow-methods": "GET, POST, OPTIONS", "access-control-allow-headers": "content-type, authorization, x-photo-message-id", "access-control-max-age": "86400" } });
 
     if (request.method === "GET" && path === "/health") return json({ ok: true, service: "NAS Photos" });
     if (request.method === "GET" && path === "/config.json") return json(CONFIG);
