@@ -74,6 +74,7 @@ export default async function handler({ query }) {
         events.push({
           id: `${key}-${i}`,
           title: l.title,
+          color: l.title.trim().toLocaleLowerCase("de-DE") === "pause" ? "yellow" : undefined,
           start: { dateTime: stamp(l.start) },
           end: { dateTime: stamp(l.end) },
           location: l.room,
