@@ -7,7 +7,7 @@
 (() => {
  const button=document.getElementById("connect"),status=document.getElementById("status");
  let hostOrigin=null,paperId=null,pendingId=null,initialized=false;
- function trusted(origin){try{const u=new URL(origin);return u.protocol==="https:"&&(u.hostname==="paperlesspaper.de"||u.hostname.endsWith(".paperlesspaper.de"));}catch{return false;}}
+ function trusted(origin){try{const u=new URL(origin);return (u.protocol==="https:"&&(u.hostname==="paperlesspaper.de"||u.hostname.endsWith(".paperlesspaper.de")))||(u.protocol==="capacitor:"&&u.hostname==="localhost");}catch{return false;}}
  function height(){if(hostOrigin)window.parent.postMessage({source:"paperlesspaper-plugin",type:"SET_HEIGHT",payload:{height:Math.min(document.documentElement.scrollHeight,700)}},hostOrigin);}
  function init(payload,origin){if(!trusted(origin)){status.textContent="Unrecognized host origin: "+origin;return;}hostOrigin=origin;initialized=true;paperId=payload?.paper?.id||payload?.paperId||null;if(paperId){button.disabled=false;button.textContent="Connect to PaperlessPaper";status.textContent="Paper identified. You can establish the secure connection.";}else{button.disabled=true;button.textContent="Save this Paper first";status.textContent="OpenPaper initialized the integration but did not provide a saved Paper ID. Save the Paper, then reopen settings.";}height();}
  window.addEventListener("message",async event=>{
