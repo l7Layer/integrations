@@ -1,141 +1,32 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NAS Photos connection</title>
-<style>
-body{font:16px/1.45 system-ui,sans-serif;color:#202124;margin:0;padding:18px}
-h2{font-size:20px;margin:0 0 8px}
-p{color:#60656f;margin:0 0 16px}
-button{border:0;border-radius:8px;background:#202124;color:white;padding:12px 18px;font:600 15px system-ui;cursor:pointer}
-button:disabled{opacity:.5;cursor:wait}
-#status{margin-top:14px;white-space:pre-wrap}
-</style>
-</head>
-<body>
-<h2>NAS Photos</h2>
-<p>Connect this saved Paper to the NAS Photos publisher. Your Mac uploads photos to this Paper. Permanent connection credentials stay on the backend.</p>
-<button id="connect" disabled>Waiting for PaperlessPaper…</button>
-<div id="status" role="status">Waiting for the host app to initialize this integration.</div>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NAS Photos connection</title>
+<style>body{font:16px/1.45 system-ui,sans-serif;color:#202124;margin:0;padding:18px}h2{font-size:20px;margin:0 0 8px}p{color:#60656f;margin:0 0 16px}button{border:0;border-radius:8px;background:#202124;color:white;padding:12px 18px;font:600 15px system-ui;cursor:pointer}button:disabled{opacity:.5;cursor:wait}#status{margin-top:14px;white-space:pre-wrap}</style></head>
+<body><h2>NAS Photos</h2><p>Connect this saved Paper to the NAS Photos publisher. Your Mac uploads photos to this Paper. Permanent connection credentials stay on the backend.</p>
+<button id="connect" disabled>Waiting for PaperlessPaper…</button><div id="status" role="status">Waiting for the host app to initialize this integration.</div>
 <script>
 (() => {
-  const button = document.getElementById("connect");
-  const status = document.getElementById("status");
-  let hostOrigin = null;
-  let paperId = null;
-  let pendingId = null;
-  let initialized = false;
-
-  function trustedOrigin(origin) {
-    try {
-      const parsed = new URL(origin);
-      return parsed.protocol === "https:" &&
-        (parsed.hostname === "paperlesspaper.de" || parsed.hostname.endsWith(".paperlesspaper.de"));
-    } catch (_) { return false; }
+ const button=document.getElementById("connect"),status=document.getElementById("status");
+ let hostOrigin=null,paperId=null,pendingId=null,initialized=false;
+ function trusted(origin){try{const u=new URL(origin);return u.protocol==="https:"&&(u.hostname==="paperlesspaper.de"||u.hostname.endsWith(".paperlesspaper.de"));}catch{return false;}}
+ function height(){if(hostOrigin)window.parent.postMessage({source:"paperlesspaper-plugin",type:"SET_HEIGHT",payload:{height:Math.min(document.documentElement.scrollHeight,700)}},hostOrigin);}
+ function init(payload,origin){if(!trusted(origin)){status.textContent="Unrecognized host origin: "+origin;return;}hostOrigin=origin;initialized=true;paperId=payload?.paper?.id||payload?.paperId||null;if(paperId){button.disabled=false;button.textContent="Connect to PaperlessPaper";status.textContent="Paper identified. You can establish the secure connection.";}else{button.disabled=true;button.textContent="Save this Paper first";status.textContent="OpenPaper initialized the integration but did not provide a saved Paper ID. Save the Paper, then reopen settings.";}height();}
+ window.addEventListener("message",async event=>{
+  if(event.source!==window.parent)return;
+  const m=event.data;if(!m||typeof m!=="object")return;
+  if(m.source==="paperlesspaper-app"&&m.type==="INIT"){init(m.payload||{},event.origin);return;}
+  if(m.cmd==="message"&&m.data&&typeof m.data==="object"){init(m.data,event.origin);return;}
+  if(m.type==="INIT"&&m.data&&typeof m.data==="object"){init(m.data,event.origin);return;}
+  if(m.source==="paperlesspaper-app"&&m.type==="CONNECTION_GRANT"){
+   if(!initialized||event.origin!==hostOrigin||!pendingId||m.payload?.requestId!==pendingId)return;
+   pendingId=null;
+   if(!m.payload.grant){button.disabled=false;status.textContent=m.payload.error||"Connection grant failed.";return;}
+   button.disabled=true;status.textContent="Exchanging the one-time grant securely…";
+   try{const r=await fetch("/api/connect",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({grant:m.payload.grant})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||"Connection failed, HTTP "+r.status);button.textContent="Connected";status.textContent="Connected to "+(d.name||"this Paper")+". You can now upload photos from your Mac.";}
+   catch(e){button.disabled=false;button.textContent="Retry connection";status.textContent=e.message||"Connection failed.";}height();
   }
-
-  function setHeight() {
-    if (!hostOrigin) return;
-    window.parent.postMessage({
-      source: "paperlesspaper-plugin",
-      type: "SET_HEIGHT",
-      payload: { height: Math.min(document.documentElement.scrollHeight, 700) }
-    }, hostOrigin);
-  }
-
-  function initialize(payload, origin) {
-    if (!trustedOrigin(origin)) {
-      status.textContent = "Initialization came from an unrecognized host origin: " + origin;
-      return;
-    }
-    hostOrigin = origin;
-    initialized = true;
-    paperId = payload?.paper?.id || payload?.paperId || null;
-    if (paperId) {
-      button.disabled = false;
-      button.textContent = "Connect to PaperlessPaper";
-      status.textContent = "Paper identified. You can establish the secure connection.";
-    } else {
-      button.disabled = true;
-      button.textContent = "Save this Paper first";
-      status.textContent = "OpenPaper initialized the integration but did not provide a saved Paper ID. Save the Paper, then reopen settings.";
-    }
-    setHeight();
-  }
-
-  window.addEventListener("message", async (event) => {
-    if (event.source !== window.parent) return;
-    const message = event.data;
-    if (!message || typeof message !== "object") return;
-
-    // Current protocol: { source, type, payload }
-    if (message.source === "paperlesspaper-app" && message.type === "INIT") {
-      initialize(message.payload || {}, event.origin);
-      return;
-    }
-
-    // Compatibility protocol used by the host: { cmd: "message", data: payload }
-    if (message.cmd === "message" && message.data && typeof message.data === "object") {
-      initialize(message.data, event.origin);
-      return;
-    }
-
-    // Some host builds wrap the compatibility payload in type INIT.
-    if (message.type === "INIT" && message.data && typeof message.data === "object") {
-      initialize(message.data, event.origin);
-      return;
-    }
-
-    if (message.source === "paperlesspaper-app" && message.type === "CONNECTION_GRANT") {
-      if (!initialized || event.origin !== hostOrigin) return;
-      if (!pendingId || !message.payload || message.payload.requestId !== pendingId) return;
-
-      pendingId = null;
-      if (!message.payload.grant) {
-        button.disabled = false;
-        status.textContent = message.payload.error || "The host could not create a connection grant. Save the Paper and try again.";
-        return;
-      }
-
-      button.disabled = true;
-      status.textContent = "Exchanging the one-time grant securely…";
-      try {
-        const response = await fetch("/api/connect", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ grant: message.payload.grant })
-        });
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(result.error || "Connection failed with HTTP " + response.status);
-        button.textContent = "Connected";
-        status.textContent = "Connected to " + (result.name || "this Paper") + ". You can now upload photos from your Mac.";
-      } catch (error) {
-        button.disabled = false;
-        button.textContent = "Retry connection";
-        status.textContent = error.message || "Connection failed.";
-      }
-      setHeight();
-    }
-  });
-
-  button.addEventListener("click", () => {
-    if (!hostOrigin || !paperId || pendingId) return;
-    pendingId = crypto.randomUUID();
-    button.disabled = true;
-    status.textContent = "Requesting a one-time connection grant…";
-    window.parent.postMessage({
-      source: "paperlesspaper-plugin",
-      type: "REQUEST_CONNECTION",
-      payload: { requestId: pendingId }
-    }, hostOrigin);
-  });
-
-  window.addEventListener("load", setHeight);
-  setTimeout(() => {
-    if (!initialized) status.textContent = "No compatible initialization message received. The host may be using an unsupported settings protocol or origin. Close and reopen settings; if it persists, send this screen.";
-  }, 5000);
+ });
+ button.addEventListener("click",()=>{if(!hostOrigin||!paperId||pendingId)return;pendingId=crypto.randomUUID();button.disabled=true;status.textContent="Requesting a one-time connection grant…";window.parent.postMessage({source:"paperlesspaper-plugin",type:"REQUEST_CONNECTION",payload:{requestId:pendingId}},hostOrigin);});
+ window.addEventListener("load",height);
+ setTimeout(()=>{if(!initialized)status.textContent="No compatible initialization message received. The host may be using an unsupported settings protocol or origin. Close and reopen settings; if it persists, send this screen.";},5000);
 })();
-</script>
-</body>
-</html>
+</script></body></html>
