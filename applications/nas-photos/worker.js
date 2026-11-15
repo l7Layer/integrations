@@ -47,13 +47,11 @@ async function exchangeGrant(grant, env) {
 const CONFIG = {
   name: "NAS Photos",
   version: "0.1.0",
-  status: "alpha",
   description: "Displays the latest photo pushed from a private NAS.",
   renderPage: "./render.html",
   settingsPage: "./settings.html",
   requiredPermissions: ["paper:content:write", "paper:delivery:read"],
   capabilities: { contentPush: { callbackPath: "/api/paper-status" } },
-  formSchema: { type: "object", properties: {} },
   language: ["en", "de"]
 };
 
