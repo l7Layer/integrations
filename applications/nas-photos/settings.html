@@ -25,8 +25,9 @@ button:disabled{opacity:.5;cursor:wait}
   let hostOrigin = null;
   let paperId = null;
   let pendingId = null;
+  let initialized = false;
 
-  function isTrustedOrigin(origin) {
+  function trustedOrigin(origin) {
     try {
       const parsed = new URL(origin);
       return parsed.protocol === "https:" &&
@@ -43,36 +44,51 @@ button:disabled{opacity:.5;cursor:wait}
     }, hostOrigin);
   }
 
+  function initialize(payload, origin) {
+    if (!trustedOrigin(origin)) {
+      status.textContent = "Initialization came from an unrecognized host origin: " + origin;
+      return;
+    }
+    hostOrigin = origin;
+    initialized = true;
+    paperId = payload?.paper?.id || payload?.paperId || null;
+    if (paperId) {
+      button.disabled = false;
+      button.textContent = "Connect to PaperlessPaper";
+      status.textContent = "Paper identified. You can establish the secure connection.";
+    } else {
+      button.disabled = true;
+      button.textContent = "Save this Paper first";
+      status.textContent = "OpenPaper initialized the integration but did not provide a saved Paper ID. Save the Paper, then reopen settings.";
+    }
+    setHeight();
+  }
+
   window.addEventListener("message", async (event) => {
     if (event.source !== window.parent) return;
-
     const message = event.data;
     if (!message || typeof message !== "object") return;
 
+    // Current protocol: { source, type, payload }
     if (message.source === "paperlesspaper-app" && message.type === "INIT") {
-      if (!isTrustedOrigin(event.origin)) {
-        status.textContent = "Received initialization from an unrecognized host origin: " + event.origin;
-        return;
-      }
-      hostOrigin = event.origin;
-      paperId = message.payload && message.payload.paper && message.payload.paper.id
-        ? message.payload.paper.id : null;
+      initialize(message.payload || {}, event.origin);
+      return;
+    }
 
-      if (paperId) {
-        button.disabled = false;
-        button.textContent = "Connect to PaperlessPaper";
-        status.textContent = "Paper identified. You can establish the secure connection.";
-      } else {
-        button.disabled = true;
-        button.textContent = "Save this Paper first";
-        status.textContent = "The host initialized the integration, but did not provide a saved Paper ID. Save the Paper, then reopen these settings.";
-      }
-      setHeight();
+    // Compatibility protocol used by the host: { cmd: "message", data: payload }
+    if (message.cmd === "message" && message.data && typeof message.data === "object") {
+      initialize(message.data, event.origin);
+      return;
+    }
+
+    // Some host builds wrap the compatibility payload in type INIT.
+    if (message.type === "INIT" && message.data && typeof message.data === "object") {
+      initialize(message.data, event.origin);
       return;
     }
 
     if (message.source === "paperlesspaper-app" && message.type === "CONNECTION_GRANT") {
-      if (!isTrustedOrigin(event.origin) || event.origin !== hostOrigin) return;
+      if (!initialized || event.origin !== hostOrigin) return;
       if (!pendingId || !message.payload || message.payload.requestId !== pendingId) return;
 
       pendingId = null;
@@ -117,7 +133,7 @@ button:disabled{opacity:.5;cursor:wait}
 
   window.addEventListener("load", setHeight);
   setTimeout(() => {
-    if (!hostOrigin) status.textContent = "No initialization message received. Close settings, save the Paper, then reopen settings. If this message remains, send us this screen.";
+    if (!initialized) status.textContent = "No compatible initialization message received. The host may be using an unsupported settings protocol or origin. Close and reopen settings; if it persists, send this screen.";
   }, 5000);
 })();
 </script>
