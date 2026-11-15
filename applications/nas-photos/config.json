@@ -1,14 +1,9 @@
 {
   "name": "NAS Photos",
   "version": "0.1.0",
-  "status": "alpha",
   "description": "Displays the latest photo pushed from a private NAS.",
   "renderPage": "./render.html",
   "settingsPage": "./settings.html",
-  "icon": "./assets/icon.png",
-  "nativeSettings": {
-    "color": "light"
-  },
   "requiredPermissions": [
     "paper:content:write",
     "paper:delivery:read"
@@ -17,10 +12,6 @@
     "contentPush": {
       "callbackPath": "/api/paper-status"
     }
-  },
-  "formSchema": {
-    "type": "object",
-    "properties": {}
   },
   "language": ["en", "de"]
 }
