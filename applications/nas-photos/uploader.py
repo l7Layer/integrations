@@ -127,6 +127,8 @@ def main():
         headers={
             "Authorization": f"Bearer {token}",
             "Content-Type": "image/jpeg",
+            "User-Agent": "OpenPaper-NAS-Photos/0.1",
+            "Accept": "application/json",
             "X-Photo-Message-Id": str(uuid4()),
         },
         method="POST",
