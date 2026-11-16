@@ -388,7 +388,17 @@
             );
 
             week.querySelectorAll(".pp-cal-week-now").forEach((marker) => marker.remove());
-            if (!cell || !Number.isFinite(startHour) || !Number.isFinite(endHour)) continue;
+            if (!cell) continue;
+
+            const cellIndex = Array.from(cell.parentElement.children).indexOf(cell);
+            const heading = week.querySelector(
+              `.pp-cal-week-head .pp-cal-week-heading:nth-child(${cellIndex + 2}) .pp-cal-column-weekday`,
+            );
+            if (heading && heading.textContent !== "HEUTE") {
+              heading.textContent = "HEUTE";
+            }
+
+            if (!Number.isFinite(startHour) || !Number.isFinite(endHour)) continue;
             if (nowMinutes < startHour * 60 || nowMinutes > endHour * 60) continue;
 
             const marker = document.createElement("div");
@@ -396,13 +406,6 @@
             marker.setAttribute("aria-hidden", "true");
             marker.style.top = `${((nowMinutes - startHour * 60) / ((endHour - startHour) * 60)) * 100}%`;
             cell.append(marker);
-
-            const heading = week.querySelector(
-              `.pp-cal-week-head .pp-cal-week-heading:nth-child(${Array.from(cell.parentElement.children).indexOf(cell) + 2}) .pp-cal-column-weekday`,
-            );
-            if (heading && heading.textContent !== "HEUTE") {
-              heading.textContent = "HEUTE";
-            }
           }
         }
 
