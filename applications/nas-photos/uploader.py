@@ -9,6 +9,7 @@ import sys
 import tempfile
 import urllib.error
 import urllib.request
+from datetime import datetime, time, timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -17,6 +18,7 @@ from PIL import Image, ImageOps
 PROJECT_DIR = Path.home() / "openpaper-photo-service"
 INDEX_FILE = PROJECT_DIR / "photo_index.json"
 HISTORY_FILE = PROJECT_DIR / "photo_history_upload.json"
+LAST_UPLOAD_FILE = PROJECT_DIR / "photo_last_upload.json"
 HISTORY_LIMIT = 100
 UPLOAD_URL = "https://nas-photos.m9051089850.workers.dev/api/upload"
 KEYCHAIN_SERVICE = "OpenPaper NAS Photos Upload"
@@ -70,6 +72,26 @@ def load_history():
         return []
 
 
+def last_successful_upload():
+    try:
+        value = json.loads(LAST_UPLOAD_FILE.read_text(encoding="utf-8"))
+        return datetime.fromisoformat(value["uploadedAt"])
+    except (FileNotFoundError, KeyError, ValueError, TypeError, json.JSONDecodeError):
+        # Migrate safely: the history file is written only after a successful upload.
+        try:
+            return datetime.fromtimestamp(HISTORY_FILE.stat().st_mtime)
+        except FileNotFoundError:
+            return None
+
+
+def automatic_upload_is_due():
+    now = datetime.now()
+    today_at_six = datetime.combine(now.date(), time(18, 0))
+    latest_scheduled_run = today_at_six if now >= today_at_six else today_at_six - timedelta(days=1)
+    last_upload = last_successful_upload()
+    return last_upload is None or last_upload < latest_scheduled_run
+
+
 def prepare_image(path):
     data = path.read_bytes()
     with Image.open(path) as source:
@@ -98,6 +120,11 @@ def main():
         save_token()
         return
 
+    automatic = "--automatic" in sys.argv
+    if automatic and not automatic_upload_is_due():
+        print("No upload needed. Today's 18:00 upload has already been completed.")
+        return
+
     if not INDEX_FILE.is_file():
         fail(f"Photo index not found: {INDEX_FILE}")
     photos = json.loads(INDEX_FILE.read_text(encoding="utf-8"))
@@ -116,6 +143,7 @@ def main():
         fail("No existing photo was found in the index.")
 
     token = load_token()
+    temp_path = None
     try:
         image_bytes, temp_path = prepare_image(selected)
     except Exception as error:
@@ -150,6 +178,10 @@ def main():
 
     history.append(str(selected))
     HISTORY_FILE.write_text(json.dumps(history[-HISTORY_LIMIT:], indent=2), encoding="utf-8")
+    uploaded_at = datetime.now().astimezone().isoformat(timespec="seconds")
+    LAST_UPLOAD_FILE.write_text(
+        json.dumps({"uploadedAt": uploaded_at}, indent=2), encoding="utf-8"
+    )
     print(f"Uploaded: {selected.name}")
     print(f"PaperlessPaper accepted the photo. Request: {result.get('requestId', 'unknown')}")
     print("The frame will update according to its normal sync schedule.")
