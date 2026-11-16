@@ -41,6 +41,39 @@
         box-shadow: inset 0 -2px #111 !important;
       }
 
+
+      /* Today is the first day in this rolling view, so no extra highlight is needed. */
+      .pp-cal--view-rolling-week .pp-cal-week-heading.is-today {
+        box-shadow: none !important;
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-week-cell.is-today {
+        box-shadow: none !important;
+      }
+
+      /* Current time marker, shown only in today's column. */
+      .pp-cal--view-rolling-week .pp-cal-week-now {
+        position: absolute;
+        z-index: 20;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #555;
+        pointer-events: none;
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-week-now::before {
+        content: "";
+        position: absolute;
+        left: -3px;
+        top: 50%;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #111;
+        transform: translateY(-50%);
+      }
+
       /* Calendar grid */
       .pp-cal--view-rolling-week .pp-cal-week-cell,
       .pp-cal--view-rolling-week .pp-cal-week-all-day-events {
@@ -262,6 +295,8 @@
             const signature = `${startHour}-${endHour}-${visibleDates}`;
             if (week.dataset.webcalTimeRange === signature) continue;
 
+            week.dataset.webcalStartHour = String(startHour);
+            week.dataset.webcalEndHour = String(endHour);
             const durationHours = endHour - startHour;
             const scale = calculateTypographyScale(durationHours);
             setStyle(week, "--pp-cal-hours", String(durationHours));
@@ -322,6 +357,55 @@
           }
         }
 
+        function getZonedDateParts(date, timeZone) {
+          const parts = new Intl.DateTimeFormat("en-CA", {
+            timeZone,
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hourCycle: "h23",
+          }).formatToParts(date);
+          return Object.fromEntries(
+            parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]),
+          );
+        }
+
+        function updateCurrentTimeIndicator() {
+          const now = new Date();
+          const parts = getZonedDateParts(now, calendarTimeZone);
+          const todayKey = `${parts.year}-${parts.month}-${parts.day}`;
+          const nowMinutes = Number(parts.hour) * 60 + Number(parts.minute);
+
+          for (const week of app.querySelectorAll(
+            ".pp-cal--view-rolling-week .pp-cal-rolling-grid-wide .pp-cal-week",
+          )) {
+            const startHour = Number(week.dataset.webcalStartHour);
+            const endHour = Number(week.dataset.webcalEndHour);
+            const cell = week.querySelector(
+              `.pp-cal-week-cell[data-date="${todayKey}"]`,
+            );
+
+            week.querySelectorAll(".pp-cal-week-now").forEach((marker) => marker.remove());
+            if (!cell || !Number.isFinite(startHour) || !Number.isFinite(endHour)) continue;
+            if (nowMinutes < startHour * 60 || nowMinutes > endHour * 60) continue;
+
+            const marker = document.createElement("div");
+            marker.className = "pp-cal-week-now";
+            marker.setAttribute("aria-hidden", "true");
+            marker.style.top = `${((nowMinutes - startHour * 60) / ((endHour - startHour) * 60)) * 100}%`;
+            cell.append(marker);
+
+            const heading = week.querySelector(
+              `.pp-cal-week-head .pp-cal-week-heading:nth-child(${Array.from(cell.parentElement.children).indexOf(cell) + 2}) .pp-cal-column-weekday`,
+            );
+            if (heading && heading.textContent !== "HEUTE") {
+              heading.textContent = "HEUTE";
+            }
+          }
+        }
+
         function formatRangeTitle(range, locale) {
           const [startYear, startMonth, startDay] = range.startKey
             .split("-")
@@ -362,8 +446,13 @@
             heading.textContent = title;
           }
           applyDynamicTimeRange();
+          updateCurrentTimeIndicator();
         }).observe(app, { childList: true, subtree: true });
-        window.addEventListener("resize", applyDynamicTimeRange);
+        window.addEventListener("resize", () => {
+          applyDynamicTimeRange();
+          updateCurrentTimeIndicator();
+        });
+        window.setInterval(updateCurrentTimeIndicator, 30_000);
 
         window.__paperlessRenderDone = bootCalendarApiIntegration({
           defaults,
