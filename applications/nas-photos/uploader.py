@@ -75,18 +75,19 @@ def load_history():
 def last_successful_upload():
     try:
         value = json.loads(LAST_UPLOAD_FILE.read_text(encoding="utf-8"))
-        return datetime.fromisoformat(value["uploadedAt"])
+        uploaded_at = datetime.fromisoformat(value["uploadedAt"])
+        return uploaded_at.astimezone() if uploaded_at.tzinfo else uploaded_at.astimezone()
     except (FileNotFoundError, KeyError, ValueError, TypeError, json.JSONDecodeError):
         # Migrate safely: the history file is written only after a successful upload.
         try:
-            return datetime.fromtimestamp(HISTORY_FILE.stat().st_mtime)
+            return datetime.fromtimestamp(HISTORY_FILE.stat().st_mtime).astimezone()
         except FileNotFoundError:
             return None
 
 
 def automatic_upload_is_due():
-    now = datetime.now()
-    today_at_six = datetime.combine(now.date(), time(18, 0))
+    now = datetime.now().astimezone()
+    today_at_six = datetime.combine(now.date(), time(18, 0), tzinfo=now.tzinfo)
     latest_scheduled_run = today_at_six if now >= today_at_six else today_at_six - timedelta(days=1)
     last_upload = last_successful_upload()
     return last_upload is None or last_upload < latest_scheduled_run
