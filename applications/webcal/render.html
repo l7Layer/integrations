@@ -52,6 +52,10 @@
       }
 
       /* Current time marker, shown only in today's column. */
+      .pp-cal--view-rolling-week .pp-cal-week-grid {
+        position: relative;
+      }
+
       .pp-cal--view-rolling-week .pp-cal-week-now {
         position: absolute;
         z-index: 20;
@@ -381,22 +385,18 @@
           for (const week of app.querySelectorAll(
             ".pp-cal--view-rolling-week .pp-cal-rolling-grid-wide .pp-cal-week",
           )) {
-            const cell = week.querySelector(
-              `.pp-cal-week-cell[data-date="${todayKey}"]`,
+            const todayHeading = week.querySelector(
+              ".pp-cal-week-heading.is-today .pp-cal-column-weekday",
             );
-            const existingMarker = week.querySelector(".pp-cal-week-now");
-
-            if (!cell) {
-              existingMarker?.remove();
-              continue;
+            if (todayHeading && todayHeading.textContent !== "HEUTE") {
+              todayHeading.textContent = "HEUTE";
             }
 
-            const cellIndex = Array.from(cell.parentElement.children).indexOf(cell);
-            const heading = week.querySelector(
-              `.pp-cal-week-head .pp-cal-week-heading:nth-child(${cellIndex + 2}) .pp-cal-column-weekday`,
-            );
-            if (heading && heading.textContent !== "HEUTE") {
-              heading.textContent = "HEUTE";
+            const grid = week.querySelector(".pp-cal-week-grid");
+            const existingMarker = week.querySelector(".pp-cal-week-now");
+            if (!grid) {
+              existingMarker?.remove();
+              continue;
             }
 
             const startHour = Number(week.dataset.webcalStartHour);
@@ -418,9 +418,8 @@
             if (!existingMarker) {
               marker.className = "pp-cal-week-now";
               marker.setAttribute("aria-hidden", "true");
-              cell.append(marker);
             }
-            if (marker.parentElement !== cell) cell.append(marker);
+            if (marker.parentElement !== grid) grid.append(marker);
             if (marker.style.top !== top) marker.style.top = top;
           }
         }
