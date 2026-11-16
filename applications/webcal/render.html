@@ -381,14 +381,15 @@
           for (const week of app.querySelectorAll(
             ".pp-cal--view-rolling-week .pp-cal-rolling-grid-wide .pp-cal-week",
           )) {
-            const startHour = Number(week.dataset.webcalStartHour);
-            const endHour = Number(week.dataset.webcalEndHour);
             const cell = week.querySelector(
               `.pp-cal-week-cell[data-date="${todayKey}"]`,
             );
+            const existingMarker = week.querySelector(".pp-cal-week-now");
 
-            week.querySelectorAll(".pp-cal-week-now").forEach((marker) => marker.remove());
-            if (!cell) continue;
+            if (!cell) {
+              existingMarker?.remove();
+              continue;
+            }
 
             const cellIndex = Array.from(cell.parentElement.children).indexOf(cell);
             const heading = week.querySelector(
@@ -398,14 +399,29 @@
               heading.textContent = "HEUTE";
             }
 
-            if (!Number.isFinite(startHour) || !Number.isFinite(endHour)) continue;
-            if (nowMinutes < startHour * 60 || nowMinutes > endHour * 60) continue;
+            const startHour = Number(week.dataset.webcalStartHour);
+            const endHour = Number(week.dataset.webcalEndHour);
+            const isVisible =
+              Number.isFinite(startHour) &&
+              Number.isFinite(endHour) &&
+              endHour > startHour &&
+              nowMinutes >= startHour * 60 &&
+              nowMinutes <= endHour * 60;
 
-            const marker = document.createElement("div");
-            marker.className = "pp-cal-week-now";
-            marker.setAttribute("aria-hidden", "true");
-            marker.style.top = `${((nowMinutes - startHour * 60) / ((endHour - startHour) * 60)) * 100}%`;
-            cell.append(marker);
+            if (!isVisible) {
+              existingMarker?.remove();
+              continue;
+            }
+
+            const top = `${((nowMinutes - startHour * 60) / ((endHour - startHour) * 60)) * 100}%`;
+            const marker = existingMarker || document.createElement("div");
+            if (!existingMarker) {
+              marker.className = "pp-cal-week-now";
+              marker.setAttribute("aria-hidden", "true");
+              cell.append(marker);
+            }
+            if (marker.parentElement !== cell) cell.append(marker);
+            if (marker.style.top !== top) marker.style.top = top;
           }
         }
 
