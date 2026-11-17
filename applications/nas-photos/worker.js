@@ -91,6 +91,14 @@ const CONFIG = {
 };
 
 export default {
+  async scheduled(controller, env, ctx) {
+    ctx.waitUntil(deliverNextPhoto(env).catch(async error => {
+      await env.NAS_PHOTOS_KV.put("lastDeliveryError", JSON.stringify({
+        at: new Date().toISOString(),
+        message: error.message || String(error)
+      }));
+    }));
+  },
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
