@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Push one random eligible NAS photo to the connected OpenPaper Paper."""
+"""Maintain a four-photo Cloudflare R2 queue from the local NAS photo library."""
 
 import getpass
 import json
@@ -9,7 +9,6 @@ import sys
 import tempfile
 import urllib.error
 import urllib.request
-from datetime import datetime, time, timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -18,12 +17,14 @@ from PIL import Image, ImageOps
 PROJECT_DIR = Path.home() / "openpaper-photo-service"
 INDEX_FILE = PROJECT_DIR / "photo_index.json"
 HISTORY_FILE = PROJECT_DIR / "photo_history_upload.json"
-LAST_UPLOAD_FILE = PROJECT_DIR / "photo_last_upload.json"
 HISTORY_LIMIT = 100
-UPLOAD_URL = "https://nas-photos.m9051089850.workers.dev/api/upload"
+WORKER_URL = "https://nas-photos.m9051089850.workers.dev"
+CACHE_STATUS_URL = WORKER_URL + "/api/cache-status"
+CACHE_UPLOAD_URL = WORKER_URL + "/api/cache-upload"
 KEYCHAIN_SERVICE = "OpenPaper NAS Photos Upload"
 MAX_BYTES = 20 * 1024 * 1024
 MAX_PIXELS = 40_000_000
+CACHE_CAPACITY = 4
 
 
 def fail(message):
@@ -60,7 +61,7 @@ def load_token():
         capture_output=True, text=True,
     )
     if result.returncode:
-        fail("No upload secret found. Run: python uploader.py --save-token")
+        fail("No upload secret found in macOS Keychain.")
     return result.stdout.strip()
 
 
@@ -72,25 +73,18 @@ def load_history():
         return []
 
 
-def last_successful_upload():
-    try:
-        value = json.loads(LAST_UPLOAD_FILE.read_text(encoding="utf-8"))
-        uploaded_at = datetime.fromisoformat(value["uploadedAt"])
-        return uploaded_at.astimezone() if uploaded_at.tzinfo else uploaded_at.astimezone()
-    except (FileNotFoundError, KeyError, ValueError, TypeError, json.JSONDecodeError):
-        # Migrate safely: the history file is written only after a successful upload.
-        try:
-            return datetime.fromtimestamp(HISTORY_FILE.stat().st_mtime).astimezone()
-        except FileNotFoundError:
-            return None
+def save_history(history):
+    HISTORY_FILE.write_text(json.dumps(history[-HISTORY_LIMIT:], indent=2), encoding="utf-8")
 
 
-def automatic_upload_is_due():
-    now = datetime.now().astimezone()
-    today_at_six = datetime.combine(now.date(), time(18, 0), tzinfo=now.tzinfo)
-    latest_scheduled_run = today_at_six if now >= today_at_six else today_at_six - timedelta(days=1)
-    last_upload = last_successful_upload()
-    return last_upload is None or last_upload < latest_scheduled_run
+def api_json(url, token):
+    request = urllib.request.Request(
+        url,
+        headers={"Authorization": f"Bearer {token}", "Accept": "application/json",
+                 "User-Agent": "OpenPaper-NAS-Photos/0.2"},
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.loads(response.read().decode("utf-8"))
 
 
 def prepare_image(path):
@@ -116,14 +110,39 @@ def prepare_image(path):
         return temp_path.read_bytes(), temp_path
 
 
+def upload_to_cache(path, token):
+    image_bytes, temp_path = prepare_image(path)
+    request = urllib.request.Request(
+        CACHE_UPLOAD_URL,
+        data=image_bytes,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "image/jpeg",
+            "User-Agent": "OpenPaper-NAS-Photos/0.2",
+            "Accept": "application/json",
+            "X-Photo-Filename": path.name,
+            "X-Photo-Message-Id": str(uuid4()),
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=90) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")
+        if error.code == 409:
+            return {"full": True}
+        fail(f"Cache upload failed with HTTP {error.code}: {detail}")
+    except Exception as error:
+        fail(f"Cache upload failed: {error}")
+    finally:
+        if temp_path:
+            temp_path.unlink(missing_ok=True)
+
+
 def main():
     if "--save-token" in sys.argv:
         save_token()
-        return
-
-    automatic = "--automatic" in sys.argv
-    if automatic and not automatic_upload_is_due():
-        print("No upload needed. Today's 18:00 upload has already been completed.")
         return
 
     if not INDEX_FILE.is_file():
@@ -132,60 +151,43 @@ def main():
     if not isinstance(photos, list) or not photos:
         fail("Photo index is empty or invalid.")
 
-    history = load_history()
-    available = [photo for photo in photos if photo not in history]
-    if not available:
-        history = []
-        available = photos
-
-    random.shuffle(available)
-    selected = next((Path(p).expanduser() for p in available if Path(p).expanduser().is_file()), None)
-    if selected is None:
-        fail("No existing photo was found in the index.")
-
     token = load_token()
-    temp_path = None
-    try:
-        image_bytes, temp_path = prepare_image(selected)
-    except Exception as error:
-        fail(f"Could not prepare photo {selected.name}: {error}")
+    status = api_json(CACHE_STATUS_URL, token)
+    queued = status.get("count", 0)
+    if queued >= CACHE_CAPACITY:
+        print(f"Cache already full: {queued}/{CACHE_CAPACITY} photos. Nothing to do.")
+        return
 
-    request = urllib.request.Request(
-        UPLOAD_URL,
-        data=image_bytes,
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "image/jpeg",
-            "User-Agent": "OpenPaper-NAS-Photos/0.1",
-            "Accept": "application/json",
-            "X-Photo-Message-Id": str(uuid4()),
-        },
-        method="POST",
-    )
+    history = load_history()
+    added = 0
+    while queued < CACHE_CAPACITY:
+        available = [photo for photo in photos if photo not in history]
+        if not available:
+            history = []
+            available = photos
+        random.shuffle(available)
+        selected = next(
+            (Path(p).expanduser() for p in available if Path(p).expanduser().is_file()),
+            None,
+        )
+        if selected is None:
+            fail("No existing photo was found in the index.")
 
-    try:
-        with urllib.request.urlopen(request, timeout=90) as response:
-            result = json.loads(response.read().decode("utf-8"))
-            if response.status not in (200, 202):
-                fail(f"Upload returned HTTP {response.status}")
-    except urllib.error.HTTPError as error:
-        detail = error.read().decode("utf-8", errors="replace")
-        fail(f"Upload failed with HTTP {error.code}: {detail}")
-    except Exception as error:
-        fail(f"Upload failed: {error}")
-    finally:
-        if temp_path:
-            temp_path.unlink(missing_ok=True)
+        try:
+            result = upload_to_cache(selected, token)
+        except Exception as error:
+            fail(f"Could not prepare photo {selected.name}: {error}")
 
-    history.append(str(selected))
-    HISTORY_FILE.write_text(json.dumps(history[-HISTORY_LIMIT:], indent=2), encoding="utf-8")
-    uploaded_at = datetime.now().astimezone().isoformat(timespec="seconds")
-    LAST_UPLOAD_FILE.write_text(
-        json.dumps({"uploadedAt": uploaded_at}, indent=2), encoding="utf-8"
-    )
-    print(f"Uploaded: {selected.name}")
-    print(f"PaperlessPaper accepted the photo. Request: {result.get('requestId', 'unknown')}")
-    print("The frame will update according to its normal sync schedule.")
+        if result.get("full"):
+            print("Cloudflare cache became full during upload. Stopping.")
+            break
+        history.append(str(selected))
+        save_history(history)
+        queued = result.get("count", queued + 1)
+        added += 1
+        print(f"Cached: {selected.name} ({queued}/{CACHE_CAPACITY})")
+
+    print(f"Cache replenishment complete. Added {added} photo(s); {queued}/{CACHE_CAPACITY} waiting.")
 
 
 if __name__ == "__main__":
