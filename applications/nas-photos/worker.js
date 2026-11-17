@@ -99,6 +99,12 @@ const CONFIG = {
 
 export default {
   async scheduled(controller, env, ctx) {
+    const berlin = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+    }).formatToParts(new Date());
+    const hour = Number(berlin.find(part => part.type === "hour").value);
+    const minute = Number(berlin.find(part => part.type === "minute").value);
+    if (hour !== 5 || minute > 45) return;
     ctx.waitUntil(deliverNextPhoto(env).catch(async error => {
       await env.NAS_PHOTOS_KV.put("lastDeliveryError", JSON.stringify({
         at: new Date().toISOString(),
