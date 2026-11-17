@@ -33,7 +33,14 @@ async function queueRead(env) {
 async function deliverNextPhoto(env) {
   const connection = await getConnection(env);
   if (!connection) throw new Error("NAS Photos is not connected to a Paper");
-  const berlinDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const now = new Date();
+  const berlinParts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23"
+  }).formatToParts(now);
+  const part = key => berlinParts.find(item => item.type === key)?.value;
+  const berlinDate = part("year") + "-" + part("month") + "-" + part("day");
+  const berlinHour = Number(part("hour"));
+  if (berlinHour !== 5) return { skipped: true, reason: "Outside delivery hour in Europe/Berlin" };
   const deliveredDate = await env.NAS_PHOTOS_KV.get("deliveredDate");
   if (deliveredDate === berlinDate) return { skipped: true, reason: "Already delivered today" };
   const queue = await queueRead(env);
