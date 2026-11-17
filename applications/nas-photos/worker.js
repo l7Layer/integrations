@@ -27,6 +27,41 @@ function base64(bytes) {
   }
   return btoa(binary);
 }
+async function queueRead(env) {
+  return (await env.NAS_PHOTOS_KV.get("photoQueue", "json")) || [];
+}
+async function deliverNextPhoto(env) {
+  const connection = await getConnection(env);
+  if (!connection) throw new Error("NAS Photos is not connected to a Paper");
+  const berlinDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const deliveredDate = await env.NAS_PHOTOS_KV.get("deliveredDate");
+  if (deliveredDate === berlinDate) return { skipped: true, reason: "Already delivered today" };
+  const queue = await queueRead(env);
+  if (!queue.length) return { skipped: true, reason: "Photo cache is empty" };
+  const item = queue[0];
+  const object = await env.NAS_PHOTOS_R2.get(item.key);
+  if (!object) {
+    await env.NAS_PHOTOS_KV.put("photoQueue", JSON.stringify(queue.slice(1)));
+    throw new Error("Cached photo object was missing; removed stale queue entry");
+  }
+  const bytes = new Uint8Array(await object.arrayBuffer());
+  const response = await fetch(API + "/integration-papers/connections/" + encodeURIComponent(connection.connectionId) + "/content", {
+    method: "POST",
+    headers: { "authorization": "Bearer " + connection.token, "content-type": "application/json" },
+    body: JSON.stringify({ messageId: "nas-photos-" + item.id, imageBase64: base64(bytes) })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || result.message || "Content push failed (" + response.status + ")");
+  await env.NAS_PHOTOS_R2.delete(item.key);
+  await env.NAS_PHOTOS_KV.put("photoQueue", JSON.stringify(queue.slice(1)));
+  await env.NAS_PHOTOS_KV.put("deliveredDate", berlinDate);
+  await env.NAS_PHOTOS_KV.put("lastDelivery", JSON.stringify({
+    deliveredAt: new Date().toISOString(), filename: item.filename || null,
+    requestId: result.requestId || null, paperId: connection.paperId
+  }));
+  return { delivered: true, filename: item.filename || null, requestId: result.requestId || null, remaining: queue.length - 1 };
+}
+
 async function getConnection(env) {
   const id = await env.NAS_PHOTOS_KV.get("activeConnectionId");
   if (!id) return null;
@@ -95,6 +130,30 @@ export default {
       } catch (error) {
         return json({ error: error.message || "Connection exchange failed" }, 502);
       }
+    }
+
+    if (request.method === "GET" && path === "/api/cache-status") {
+      if (!equalSecret(bearer(request), env.UPLOAD_SECRET)) return json({ error: "Unauthorized" }, 401);
+      const queue = await queueRead(env);
+      const lastDelivery = await env.NAS_PHOTOS_KV.get("lastDelivery", "json");
+      return json({ count: queue.length, capacity: 4, queued: queue.map(item => ({ filename: item.filename, queuedAt: item.queuedAt })), lastDelivery });
+    }
+
+    if (request.method === "POST" && path === "/api/cache-upload") {
+      if (!equalSecret(bearer(request), env.UPLOAD_SECRET)) return json({ error: "Unauthorized" }, 401);
+      const queue = await queueRead(env);
+      if (queue.length >= 4) return json({ error: "Photo cache is full", count: queue.length }, 409);
+      const type = request.headers.get("content-type") || "";
+      if (!["image/jpeg", "image/png", "image/webp"].includes(type.split(";")[0].trim().toLowerCase())) return json({ error: "Upload a JPEG, PNG or WebP image" }, 415);
+      const bytes = new Uint8Array(await request.arrayBuffer());
+      if (!bytes.length || bytes.length > 20 * 1024 * 1024) return json({ error: "Image must be between 1 byte and 20 MiB" }, 413);
+      const id = crypto.randomUUID();
+      const filename = (request.headers.get("x-photo-filename") || "photo.jpg").replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
+      const key = "queue/" + id + ".jpg";
+      await env.NAS_PHOTOS_R2.put(key, bytes, { httpMetadata: { contentType: type.split(";")[0].trim().toLowerCase() } });
+      const updated = [...queue, { id, key, filename, queuedAt: new Date().toISOString() }];
+      await env.NAS_PHOTOS_KV.put("photoQueue", JSON.stringify(updated));
+      return json({ queued: true, count: updated.length, capacity: 4, id, filename }, 201);
     }
 
     if (request.method === "POST" && path === "/api/upload") {
