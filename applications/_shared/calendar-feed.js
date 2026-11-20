@@ -1,7 +1,5 @@
-import { lookup as dnsLookup } from "node:dns/promises";
-import { request as httpRequest } from "node:http";
-import { request as httpsRequest } from "node:https";
-import { isIP } from "node:net";
+import { resolve4, resolve6 } from "node:dns/promises";
+import { BlockList, isIP } from "node:net";
 
 import { parseICalendar } from "@paperlesspaper/openintegration/ical";
 
@@ -12,8 +10,32 @@ const DEFAULT_OCCURRENCE_LIMIT = 50_000;
 const MAX_REDIRECTS = 5;
 const DNS_TIMEOUT_MS = 5_000;
 const REQUEST_TIMEOUT_MS = 20_000;
-const PRIVATE_NETWORK_ENV = "PAPERLESSPAPER_ALLOW_PRIVATE_CALENDAR_NETWORKS";
-const INSECURE_HTTP_ENV = "PAPERLESSPAPER_ALLOW_INSECURE_CALENDAR_HTTP";
+const blockedIPv4 = new BlockList();
+for (const [network, prefix] of [
+  ["0.0.0.0", 8],
+  ["10.0.0.0", 8],
+  ["100.64.0.0", 10],
+  ["127.0.0.0", 8],
+  ["169.254.0.0", 16],
+  ["172.16.0.0", 12],
+  ["192.0.0.0", 24],
+  ["192.0.2.0", 24],
+  ["192.88.99.0", 24],
+  ["192.168.0.0", 16],
+  ["198.18.0.0", 15],
+  ["198.51.100.0", 24],
+  ["203.0.113.0", 24],
+  ["224.0.0.0", 3]
+]) {
+  blockedIPv4.addSubnet(network, prefix, "ipv4");
+}
+
+const globalIPv6 = new BlockList();
+globalIPv6.addSubnet("2000::", 3, "ipv6");
+const blockedIPv6 = new BlockList();
+blockedIPv6.addSubnet("2001::", 23, "ipv6");
+blockedIPv6.addSubnet("2001:db8::", 32, "ipv6");
+blockedIPv6.addSubnet("2002::", 16, "ipv6");
 
 export function firstValue(value) {
   return Array.isArray(value) ? value[0] : value;
@@ -248,22 +270,115 @@ function insecureHttpAllowed() {
   return false;
 }
 
-function validateCalendarHost(url) {
-  const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+function isPublicAddress(address) {
+  const version = isIP(address);
+  if (version === 4) return !blockedIPv4.check(address, "ipv4");
+  if (version === 6) {
+    return globalIPv6.check(address, "ipv6") && !blockedIPv6.check(address, "ipv6");
+  }
+  return false;
+}
 
+function noDnsRecord(error) {
+  return ["ENODATA", "ENOTFOUND", "NODATA"].includes(error?.code);
+}
+
+async function resolveCalendarHost(hostname) {
+  let timer;
+  try {
+    const records = await Promise.race([
+      Promise.all([
+        resolve4(hostname).catch(error => {
+          if (noDnsRecord(error)) return [];
+          throw error;
+        }),
+        resolve6(hostname).catch(error => {
+          if (noDnsRecord(error)) return [];
+          throw error;
+        })
+      ]),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("Calendar DNS lookup timed out.")), DNS_TIMEOUT_MS);
+      })
+    ]);
+
+    const addresses = [...new Set([...records[0], ...records[1]])];
+    if (!addresses.length) {
+      throw new Error("Calendar hostname did not resolve to a public address.");
+    }
+    if (addresses.some(address => !isPublicAddress(address))) {
+      throw new Error("Calendar hostname resolves to a private or reserved network address.");
+    }
+  } catch (error) {
+    if (error.message?.includes("private or reserved") || error.message?.includes("did not resolve")) {
+      throw error;
+    }
+    throw new Error("Calendar hostname could not be safely resolved.");
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function validateCalendarHost(url) {
+  const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
   if (
+    !hostname ||
+    isIP(hostname) ||
+    !hostname.includes(".") ||
     hostname === "localhost" ||
     hostname.endsWith(".localhost") ||
     hostname.endsWith(".local") ||
-    /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname) ||
-    hostname.includes(":")
+    hostname.endsWith(".internal") ||
+    hostname.endsWith(".home") ||
+    hostname.endsWith(".lan") ||
+    hostname.endsWith(".test") ||
+    hostname.endsWith(".invalid")
   ) {
     throw new Error("Calendar URL must use a public hostname, not a local or IP address.");
   }
+  await resolveCalendarHost(hostname);
 }
 
 function headerValue(headers, name) {
   return headers[String(name).toLowerCase()] || "";
+}
+
+async function readLimitedResponse(response, maxBytes) {
+  const declaredLength = Number(response.headers.get("content-length"));
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    await response.body?.cancel();
+    throw new Error(`Calendar response exceeds the ${Math.floor(maxBytes / 1024 / 1024)} MB limit.`);
+  }
+
+  if (!response.body) {
+    const text = await response.text();
+    if (new TextEncoder().encode(text).byteLength > maxBytes) {
+      throw new Error(`Calendar response exceeds the ${Math.floor(maxBytes / 1024 / 1024)} MB limit.`);
+    }
+    return text;
+  }
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let totalBytes = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    totalBytes += value.byteLength;
+    if (totalBytes > maxBytes) {
+      await reader.cancel();
+      throw new Error(`Calendar response exceeds the ${Math.floor(maxBytes / 1024 / 1024)} MB limit.`);
+    }
+    chunks.push(value);
+  }
+
+  const combined = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    combined.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(combined);
 }
 
 async function requestCalendarUrl({
@@ -281,79 +396,65 @@ async function requestCalendarUrl({
   let currentHeaders = { ...headers };
 
   for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount += 1) {
-    validateCalendarHost(currentUrl);
-
+    await validateCalendarHost(currentUrl);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-    let response;
-
     try {
-      response = await fetch(currentUrl, {
+      const response = await fetch(currentUrl, {
         method: currentMethod,
         headers: currentHeaders,
         body: currentBody,
         redirect: "manual",
         signal: controller.signal
       });
+
+      const responseHeaders = Object.fromEntries(response.headers.entries());
+      const location = headerValue(responseHeaders, "location");
+      const isRedirect = [301, 302, 303, 307, 308].includes(response.status) && location;
+
+      if (isRedirect) {
+        await response.body?.cancel();
+        if (!followRedirects) {
+          throw new Error("Calendar request refused a redirect because credentials were present.");
+        }
+        if (redirectCount >= MAX_REDIRECTS) {
+          throw new Error(`Calendar request exceeded ${MAX_REDIRECTS} redirects.`);
+        }
+
+        const previousOrigin = currentUrl.origin;
+        currentUrl = new URL(normalizeFeedUrl(new URL(location, currentUrl).toString(), { allowHttp }));
+
+        if (currentUrl.origin !== previousOrigin) {
+          currentHeaders = Object.fromEntries(
+            Object.entries(currentHeaders).filter(
+              ([name]) => !["authorization", "cookie", "proxy-authorization"].includes(name.toLowerCase())
+            )
+          );
+        }
+
+        if (response.status === 303 || ([301, 302].includes(response.status) && currentMethod !== "GET")) {
+          currentMethod = "GET";
+          currentBody = undefined;
+          currentHeaders = Object.fromEntries(
+            Object.entries(currentHeaders).filter(
+              ([name]) => !["content-length", "content-type"].includes(name.toLowerCase())
+            )
+          );
+        }
+        continue;
+      }
+
+      const text = await readLimitedResponse(response, maxBytes);
+      return { status: response.status, headers: responseHeaders, text };
     } catch (error) {
-      if (error.name === "AbortError") {
+      if (controller.signal.aborted || error.name === "AbortError") {
         throw new Error("Calendar request timed out.");
       }
-      throw new Error(`Calendar request failed: ${error.message}`);
+      throw error;
     } finally {
       clearTimeout(timeout);
     }
-
-    const responseHeaders = Object.fromEntries(response.headers.entries());
-    const location = headerValue(responseHeaders, "location");
-    const isRedirect = [301, 302, 303, 307, 308].includes(response.status) && location;
-
-    if (isRedirect) {
-      if (!followRedirects) {
-        throw new Error("Calendar request refused a redirect because credentials were present.");
-      }
-
-      if (redirectCount >= MAX_REDIRECTS) {
-        throw new Error(`Calendar request exceeded ${MAX_REDIRECTS} redirects.`);
-      }
-
-      const nextUrl = new URL(location, currentUrl);
-      normalizeFeedUrl(nextUrl.toString(), { allowHttp });
-
-      if (nextUrl.origin !== currentUrl.origin) {
-        currentHeaders = Object.fromEntries(
-          Object.entries(currentHeaders).filter(
-            ([name]) => name.toLowerCase() !== "authorization"
-          )
-        );
-      }
-
-      if (response.status === 303 || ([301, 302].includes(response.status) && currentMethod !== "GET")) {
-        currentMethod = "GET";
-        currentBody = undefined;
-        currentHeaders = Object.fromEntries(
-          Object.entries(currentHeaders).filter(
-            ([name]) => !["content-length", "content-type"].includes(name.toLowerCase())
-          )
-        );
-      }
-
-      currentUrl = nextUrl;
-      continue;
-    }
-
-    const data = await response.arrayBuffer();
-
-    if (data.byteLength > maxBytes) {
-      throw new Error("Calendar response exceeds the 5 MB limit.");
-    }
-
-    return {
-      status: response.status,
-      headers: responseHeaders,
-      text: new TextDecoder().decode(data)
-    };
   }
 
   throw new Error(`Calendar request exceeded ${MAX_REDIRECTS} redirects.`);
