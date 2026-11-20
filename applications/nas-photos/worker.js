@@ -19,6 +19,77 @@ function bearer(request) {
   const value = request.headers.get("authorization") || "";
   return value.startsWith("Bearer ") ? value.slice(7) : "";
 }
+async function readJsonLimited(request, maxBytes) {
+  const declaredLength = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    return { error: "Request body exceeds the size limit.", status: 413 };
+  }
+  if (!request.body) return { error: "A JSON request body is required.", status: 400 };
+  const reader = request.body.getReader();
+  const chunks = [];
+  let totalBytes = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    totalBytes += value.byteLength;
+    if (totalBytes > maxBytes) {
+      await reader.cancel();
+      return { error: "Request body exceeds the size limit.", status: 413 };
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  try {
+    const value = JSON.parse(new TextDecoder().decode(bytes));
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return { error: "JSON request body must be an object.", status: 400 };
+    }
+    return { value };
+  } catch { return { error: "Invalid JSON request body.", status: 400 }; }
+}
+
+async function readImageLimited(request, maxBytes) {
+  const declaredLength = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    return { error: "Image must not exceed 20 MiB.", status: 413 };
+  }
+  if (!request.body) return { error: "Image body is empty.", status: 400 };
+  const reader = request.body.getReader();
+  const chunks = [];
+  let totalBytes = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    totalBytes += value.byteLength;
+    if (totalBytes > maxBytes) {
+      await reader.cancel();
+      return { error: "Image must not exceed 20 MiB.", status: 413 };
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  if (!bytes.length) return { error: "Image body is empty.", status: 400 };
+  const type = (request.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+  const isJpeg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  const isPng = bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 &&
+    bytes[2] === 0x4e && bytes[3] === 0x47 && bytes[4] === 0x0d &&
+    bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a;
+  const isWebp = bytes.length >= 12 &&
+    String.fromCharCode(...bytes.subarray(0, 4)) === "RIFF" &&
+    String.fromCharCode(...bytes.subarray(8, 12)) === "WEBP";
+  if (
+    (type === "image/jpeg" && !isJpeg) ||
+    (type === "image/png" && !isPng) ||
+    (type === "image/webp" && !isWebp) ||
+    !["image/jpeg", "image/png", "image/webp"].includes(type)
+  ) return { error: "Image content does not match its JPEG, PNG or WebP content type.", status: 415 };
+  return { bytes, type };
+}
+
 function base64(bytes) {
   let binary = "";
   const chunk = 0x8000;
@@ -130,8 +201,10 @@ export default {
     }
 
     if (request.method === "POST" && path === "/api/connect") {
-      const body = await request.json().catch(() => null);
-      if (!body || typeof body.grant !== "string" || body.grant.length > 4096) return json({ error: "Invalid connection grant" }, 400);
+      const parsed = await readJsonLimited(request, 8 * 1024);
+      if (parsed.error) return json({ error: parsed.error }, parsed.status);
+      const body = parsed.value;
+      if (typeof body.grant !== "string" || body.grant.length < 1 || body.grant.length > 4096) return json({ error: "Invalid connection grant" }, 400);
       try {
         const connection = await exchangeGrant(body.grant, env);
         if (!connection.connectionId || !connection.paperId || !connection.token || !connection.callbackToken) {
@@ -164,49 +237,29 @@ export default {
       if (!equalSecret(bearer(request), env.UPLOAD_SECRET)) return json({ error: "Unauthorized" }, 401);
       const queue = await queueRead(env);
       if (queue.length >= 4) return json({ error: "Photo cache is full", count: queue.length }, 409);
-      const type = request.headers.get("content-type") || "";
-      if (!["image/jpeg", "image/png", "image/webp"].includes(type.split(";")[0].trim().toLowerCase())) return json({ error: "Upload a JPEG, PNG or WebP image" }, 415);
-      const bytes = new Uint8Array(await request.arrayBuffer());
-      if (!bytes.length || bytes.length > 20 * 1024 * 1024) return json({ error: "Image must be between 1 byte and 20 MiB" }, 413);
+      const image = await readImageLimited(request, 20 * 1024 * 1024);
+      if (image.error) return json({ error: image.error }, image.status);
+      const bytes = image.bytes;
+      const type = image.type;
       const id = crypto.randomUUID();
       const filename = (request.headers.get("x-photo-filename") || "photo.jpg").replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
-      const key = "queue/" + id + ".jpg";
-      await env.NAS_PHOTOS_R2.put(key, bytes, { httpMetadata: { contentType: type.split(";")[0].trim().toLowerCase() } });
+      const extension = type === "image/png" ? ".png" : type === "image/webp" ? ".webp" : ".jpg";
+      const key = "queue/" + id + extension;
+      await env.NAS_PHOTOS_R2.put(key, bytes, { httpMetadata: { contentType: type } });
       const updated = [...queue, { id, key, filename, queuedAt: new Date().toISOString() }];
       await env.NAS_PHOTOS_KV.put("photoQueue", JSON.stringify(updated));
       return json({ queued: true, count: updated.length, capacity: 4, id, filename }, 201);
     }
 
-    if (request.method === "POST" && path === "/api/upload") {
-      if (!equalSecret(bearer(request), env.UPLOAD_SECRET)) return json({ error: "Unauthorized" }, 401);
-      const connection = await getConnection(env);
-      if (!connection) return json({ error: "NAS Photos is not connected to a Paper yet" }, 409);
-      const type = request.headers.get("content-type") || "";
-      if (!["image/jpeg", "image/png", "image/webp"].includes(type.split(";")[0].trim().toLowerCase())) {
-        return json({ error: "Upload a JPEG, PNG or WebP image" }, 415);
-      }
-      const bytes = new Uint8Array(await request.arrayBuffer());
-      if (!bytes.length || bytes.length > 20 * 1024 * 1024) return json({ error: "Image must be between 1 byte and 20 MiB" }, 413);
-      const messageId = request.headers.get("x-photo-message-id") || crypto.randomUUID();
-      if (messageId.length > 128) return json({ error: "Message ID is too long" }, 400);
-      const response = await fetch(API + "/integration-papers/connections/" + encodeURIComponent(connection.connectionId) + "/content", {
-        method: "POST",
-        headers: {
-          "authorization": "Bearer " + connection.token,
-          "content-type": "application/json"
-        },
-        body: JSON.stringify({ messageId, imageBase64: base64(bytes) })
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) return json({ error: result.error || result.message || "Content push failed", upstreamStatus: response.status }, response.status);
-      return json({ accepted: true, ...result }, 202);
-    }
-
     if (request.method === "POST" && path === "/api/paper-status") {
-      const event = await request.json().catch(() => null);
-      if (!event || typeof event.eventId !== "string" || typeof event.connectionId !== "string" || typeof event.paperId !== "string") {
-        return json({ error: "Invalid callback event" }, 400);
-      }
+      const parsed = await readJsonLimited(request, 16 * 1024);
+      if (parsed.error) return json({ error: parsed.error }, parsed.status);
+      const event = parsed.value;
+      if (
+        typeof event.eventId !== "string" || event.eventId.length < 1 || event.eventId.length > 128 ||
+        typeof event.connectionId !== "string" || event.connectionId.length > 128 ||
+        typeof event.paperId !== "string" || event.paperId.length > 128
+      ) return json({ error: "Invalid callback event" }, 400);
       const connection = await env.NAS_PHOTOS_KV.get("connection:" + event.connectionId, "json");
       if (!connection || connection.paperId !== event.paperId || !equalSecret(bearer(request), connection.callbackToken)) {
         return json({ error: "Unauthorized callback" }, 401);
@@ -217,12 +270,12 @@ export default {
           eventId: event.eventId,
           connectionId: event.connectionId,
           paperId: event.paperId,
-          requestId: event.requestId || null,
-          state: event.state || "unknown",
-          deviceId: event.deviceId || null,
-          frameName: event.frameName || null,
-          error: event.error || event.message || null,
-          occurredAt: event.occurredAt || new Date().toISOString()
+          requestId: typeof event.requestId === "string" ? event.requestId.slice(0, 128) : null,
+          state: typeof event.state === "string" ? event.state.slice(0, 64) : "unknown",
+          deviceId: typeof event.deviceId === "string" ? event.deviceId.slice(0, 128) : null,
+          frameName: typeof event.frameName === "string" ? event.frameName.slice(0, 128) : null,
+          error: typeof (event.error || event.message) === "string" ? (event.error || event.message).slice(0, 500) : null,
+          occurredAt: typeof event.occurredAt === "string" ? event.occurredAt.slice(0, 64) : new Date().toISOString()
         }), { expirationTtl: 604800 });
       }
       return new Response(null, { status: 204 });
