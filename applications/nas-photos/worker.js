@@ -146,6 +146,20 @@ async function getConnection(env) {
   const value = await env.NAS_PHOTOS_KV.get("connection:" + id, "json");
   return value || null;
 }
+
+async function getConnectionStatus(env, paperId) {
+  const connection = await getConnection(env);
+  if (!connection || connection.paperId !== paperId) {
+    return { connected: false, reconnectRequired: false };
+  }
+  return {
+    connected: true,
+    reconnectRequired: false,
+    name: connection.name || "NAS Photos",
+    connectedAt: connection.connectedAt || null,
+    deliveries: []
+  };
+}
 async function exchangeGrant(grant, env) {
   const response = await fetch(API + "/integration-papers/exchange", {
     method: "POST",
@@ -205,15 +219,17 @@ export default {
       if (parsed.error) return json({ error: parsed.error }, parsed.status);
       const body = parsed.value;
       if (typeof body.grant !== "string" || body.grant.length < 1 || body.grant.length > 4096) return json({ error: "Invalid connection grant" }, 400);
-      const ownerPaperId = (env.OWNER_PAPER_ID || "").trim();
-      if (!ownerPaperId) return json({ error: "NAS Photos connection is not configured." }, 503);
       try {
+        const existingConnection = await getConnection(env);
+        if (!existingConnection) {
+          return json({ error: "The existing NAS Photos owner connection is missing. Reconnect through the service owner before changing this connection." }, 503);
+        }
         const connection = await exchangeGrant(body.grant, env);
         if (!connection.connectionId || !connection.paperId || !connection.token || !connection.callbackToken) {
           return json({ error: "PaperlessPaper returned an incomplete connection response" }, 502);
         }
-        if (connection.paperId !== ownerPaperId) {
-          return json({ error: "This NAS Photos service is reserved for its configured Paper." }, 403);
+        if (connection.paperId !== existingConnection.paperId) {
+          return json({ error: "This NAS Photos service is reserved for its existing Paper." }, 403);
         }
         const stored = {
           connectionId: connection.connectionId,
