@@ -7,6 +7,46 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
+const MAX_SETTINGS_BYTES = 16 * 1024;
+
+async function readSettings(request) {
+  const declaredLength = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_SETTINGS_BYTES) {
+    return { error: "Settings request exceeds the 16 KB limit.", status: 413 };
+  }
+  if (!request.body) return { error: "A JSON settings object is required.", status: 400 };
+
+  const reader = request.body.getReader();
+  const chunks = [];
+  let totalBytes = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    totalBytes += value.byteLength;
+    if (totalBytes > MAX_SETTINGS_BYTES) {
+      await reader.cancel();
+      return { error: "Settings request exceeds the 16 KB limit.", status: 413 };
+    }
+    chunks.push(value);
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  try {
+    const value = JSON.parse(new TextDecoder().decode(bytes));
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return { error: "JSON settings must be an object.", status: 400 };
+    }
+    return { value };
+  } catch {
+    return { error: "Invalid JSON settings.", status: 400 };
+  }
+}
+
 function withCors(response) {
   const headers = new Headers(response.headers);
 
@@ -33,17 +73,21 @@ export default {
     }
 
     if (url.pathname === "/api/data" && request.method === "POST") {
+      const parsed = await readSettings(request);
+      if (parsed.error) {
+        return withCors(Response.json(
+          { error: parsed.error },
+          { status: parsed.status, headers: { "Cache-Control": "no-store" } }
+        ));
+      }
       try {
-        const settings = await request.json();
-        const data = await dataHandler({ query: settings });
-        return withCors(Response.json(data));
+        const data = await dataHandler({ query: parsed.value });
+        return withCors(Response.json(data, { headers: { "Cache-Control": "no-store" } }));
       } catch (error) {
-        return withCors(
-          Response.json(
-            { error: error.message || "Calendar request failed" },
-            { status: 500 }
-          )
-        );
+        return withCors(Response.json(
+          { error: error.message || "Calendar request failed" },
+          { status: 502, headers: { "Cache-Control": "no-store" } }
+        ));
       }
     }
 
