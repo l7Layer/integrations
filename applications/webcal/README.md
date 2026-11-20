@@ -52,8 +52,11 @@ they do not appear in query strings or routine URL access logs. The trusted rend
 still receive these values; use HTTPS and disable request-body logging. Treat a private sharing URL
 like a password and revoke it at the calendar provider if exposed.
 
-Remote hosts are resolved and pinned before connection. Public network destinations are allowed by
-default; private, loopback, link-local, and non-routable destinations are blocked. A trusted
+Remote calendar URLs must use HTTPS and a public hostname. Before each request, the adapter checks
+DNS A and AAAA records and rejects private, loopback, link-local, and reserved addresses. It repeats
+the checks after redirects, strips credentials across origins, and refuses redirects for authenticated
+feeds. Cloudflare Workers also apply their own outbound networking restrictions. These checks add
+application-level defence in depth; DNS pre-validation is not a socket-level DNS pin. A trusted
 self-hosted deployment may opt in with:
 
 ```sh
@@ -67,7 +70,9 @@ PAPERLESSPAPER_ALLOW_INSECURE_CALENDAR_HTTP=true
 ```
 
 Do not enable either override on an unrestricted public integration host. Requests have redirect,
-DNS, timeout, response-size, source-event, occurrence, and date-range limits. Authorization is
+DNS, timeout, response-size, source-event, occurrence, and date-range limits. The public data
+endpoint accepts only JSON settings requests up to 16 KB; apply an edge rate limit to it on any
+public deployment. Authorization is
 never forwarded across origins, and authenticated feeds refuse redirects.
 
 ## Local verification
