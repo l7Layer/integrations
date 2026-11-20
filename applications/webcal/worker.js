@@ -73,6 +73,20 @@ export default {
     }
 
     if (url.pathname === "/api/data" && request.method === "POST") {
+      if (!env.CALENDAR_RATE_LIMITER) {
+        return withCors(Response.json(
+          { error: "Calendar service rate limiting is not configured." },
+          { status: 503, headers: { "Cache-Control": "no-store" } }
+        ));
+      }
+      const clientKey = request.headers.get("cf-connecting-ip") || "unknown";
+      const rate = await env.CALENDAR_RATE_LIMITER.limit({ key: clientKey });
+      if (!rate.success) {
+        return withCors(Response.json(
+          { error: "Too many calendar requests. Try again in a minute." },
+          { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": "60" } }
+        ));
+      }
       const parsed = await readSettings(request);
       if (parsed.error) {
         return withCors(Response.json(
