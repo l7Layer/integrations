@@ -6,3 +6,11 @@ compatibility_date = "2026-11-14"
 directory = "."
 binding = "ASSETS"
 run_worker_first = true
+
+[[ratelimits]]
+name = "CALENDAR_RATE_LIMITER"
+namespace_id = "2026112001"
+
+[ratelimits.simple]
+limit = 100
+period = 60
