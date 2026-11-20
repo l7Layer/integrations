@@ -55,25 +55,13 @@ like a password and revoke it at the calendar provider if exposed.
 Remote calendar URLs must use HTTPS and a public hostname. Before each request, the adapter checks
 DNS A and AAAA records and rejects private, loopback, link-local, and reserved addresses. It repeats
 the checks after redirects, strips credentials across origins, and refuses redirects for authenticated
-feeds. Cloudflare Workers also apply their own outbound networking restrictions. These checks add
-application-level defence in depth; DNS pre-validation is not a socket-level DNS pin. A trusted
-self-hosted deployment may opt in with:
+feeds. Cloudflare Workers also enforce outbound networking restrictions. DNS pre-validation adds
+application-level defence in depth; it does not pin the eventual connection to the checked address.
 
-```sh
-PAPERLESSPAPER_ALLOW_PRIVATE_CALENDAR_NETWORKS=true
-```
-
-Plain HTTP additionally requires both **Allow insecure HTTP** and the server-side opt-in:
-
-```sh
-PAPERLESSPAPER_ALLOW_INSECURE_CALENDAR_HTTP=true
-```
-
-Do not enable either override on an unrestricted public integration host. Requests have redirect,
-DNS, timeout, response-size, source-event, occurrence, and date-range limits. The public data
-endpoint accepts only JSON settings requests up to 16 KB; apply an edge rate limit to it on any
-public deployment. Authorization is
-never forwarded across origins, and authenticated feeds refuse redirects.
+The public data endpoint accepts only JSON settings requests up to 16 KB. A Cloudflare Worker rate
+limiter allows up to 100 requests per client IP per 60 seconds in each Cloudflare location. These
+limits are burst controls, not a global accounting system. HTTP and private-network exceptions are
+disabled in the public Worker.
 
 ## Local verification
 
