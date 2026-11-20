@@ -205,10 +205,15 @@ export default {
       if (parsed.error) return json({ error: parsed.error }, parsed.status);
       const body = parsed.value;
       if (typeof body.grant !== "string" || body.grant.length < 1 || body.grant.length > 4096) return json({ error: "Invalid connection grant" }, 400);
+      const ownerPaperId = (env.OWNER_PAPER_ID || "").trim();
+      if (!ownerPaperId) return json({ error: "NAS Photos connection is not configured." }, 503);
       try {
         const connection = await exchangeGrant(body.grant, env);
         if (!connection.connectionId || !connection.paperId || !connection.token || !connection.callbackToken) {
           return json({ error: "PaperlessPaper returned an incomplete connection response" }, 502);
+        }
+        if (connection.paperId !== ownerPaperId) {
+          return json({ error: "This NAS Photos service is reserved for its configured Paper." }, 403);
         }
         const stored = {
           connectionId: connection.connectionId,
