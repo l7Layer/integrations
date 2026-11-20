@@ -40,14 +40,14 @@ white, red, yellow, blue, and green**.
 
 This repository depends on the sibling source repository:
 
-- `/Users/utzel/htdocs/paperlesspaper-openintegration`
+- `the sibling paperlesspaper-openintegration source repository`
 
 Treat that sibling as the canonical source for `@paperlesspaper/openintegration`.
 This repository consumes an exact npm release of `@paperlesspaper/openintegration`.
 The installed package is a build artifact, not the canonical source.
 
 Before creating a new integration, read
-`/Users/utzel/htdocs/paperlesspaper-openintegration/README.md` and use it as the
+`the sibling paperlesspaper-openintegration source repository/README.md` and use it as the
 implementation guide. In particular, follow its LLM integration contract,
 recommended generation and validation loop, manifest and settings conventions,
 render lifecycle, localization rules, icon guidance, theme usage, and fixed-size
