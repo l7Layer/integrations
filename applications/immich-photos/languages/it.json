@@ -1,0 +1,11 @@
+{
+  "loading": "Caricamento...",
+  "updated": "Aggiornato",
+  "from": "da",
+  "errorTitle": "Impossibile caricare Immich",
+  "apiFailed": "Richiesta Immich non riuscita con {status}",
+  "title": "Foto Immich",
+  "fallbackCaption": "Foto Immich",
+  "imageFailed": "Impossibile caricare l'immagine Immich risolta.",
+  "photoDetailsLabel": "Dettagli della foto"
+}

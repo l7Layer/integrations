@@ -1,0 +1,127 @@
+{
+  "name": "Deutsche Bahn Abfahrten",
+  "version": "0.1.0",
+  "status": "alpha",
+  "description": "Shows upcoming realtime departures for a Deutsche Bahn station.",
+  "renderPage": "./render.html",
+  "icon": "./assets/icon.png",
+  "nativeSettings": {
+    "color": "light",
+    "stationName": "Berlin Hbf",
+    "stationId": "",
+    "duration": 90,
+    "limit": 7,
+    "products": "nationalExpress,national,regionalExpress,regional,suburban,subway,tram,bus",
+    "locale": "de-DE",
+    "timeZone": "Europe/Berlin",
+    "showCancelled": true,
+    "showPlatformChanges": true,
+    "destination": ""
+  },
+  "configVariants": [
+    {
+      "color": "light",
+      "stationName": "Berlin Hbf",
+      "stationId": "8011160",
+      "duration": 90,
+      "limit": 7,
+      "products": "nationalExpress,national,regionalExpress,regional,suburban,subway,tram,bus",
+      "locale": "de-DE",
+      "timeZone": "Europe/Berlin",
+      "showCancelled": true,
+      "showPlatformChanges": true,
+      "screenshots": {
+        "800x480": "./screenshots/deutsche-bahn-abfahrten-berlin-hbf-800x480-landscape.png",
+        "480x800": "./screenshots/deutsche-bahn-abfahrten-berlin-hbf-480x800-portrait.png",
+        "1600x1200": "./screenshots/deutsche-bahn-abfahrten-berlin-hbf-1600x1200-landscape.png",
+        "1200x1600": "./screenshots/deutsche-bahn-abfahrten-berlin-hbf-1200x1600-portrait.png"
+      }
+    },
+    {
+      "color": "dark",
+      "stationName": "Hamburg Hbf",
+      "stationId": "8002549",
+      "duration": 45,
+      "limit": 6,
+      "products": "regionalExpress,regional,suburban",
+      "locale": "de-DE",
+      "timeZone": "Europe/Berlin",
+      "showCancelled": false,
+      "showPlatformChanges": true,
+      "screenshots": {
+        "800x480": "./screenshots/deutsche-bahn-abfahrten-hamburg-regional-800x480-landscape.png",
+        "480x800": "./screenshots/deutsche-bahn-abfahrten-hamburg-regional-480x800-portrait.png",
+        "1600x1200": "./screenshots/deutsche-bahn-abfahrten-hamburg-regional-1600x1200-landscape.png",
+        "1200x1600": "./screenshots/deutsche-bahn-abfahrten-hamburg-regional-1200x1600-portrait.png"
+      }
+    }
+  ],
+  "formSchema": {
+    "type": "object",
+    "properties": {
+      "stationName": {
+        "type": "string",
+        "title": "Station name",
+        "default": "Berlin Hbf",
+        "description": "Used to find the station when no station ID is set."
+      },
+      "stationId": {
+        "type": "string",
+        "title": "Station ID",
+        "default": "",
+        "description": "Optional DB stop/station ID, for example 8011160 for Berlin Hbf."
+      },
+      "duration": {
+        "type": "number",
+        "title": "Lookahead minutes",
+        "default": 90,
+        "description": "Show departures from now until this many minutes ahead (10–360). The fallback service may provide a shorter timetable."
+      },
+      "limit": {
+        "type": "number",
+        "title": "Departures",
+        "default": 7
+      },
+      "products": {
+        "type": "string",
+        "title": "Products",
+        "default": "nationalExpress,national,regionalExpress,regional,suburban,subway,tram,bus",
+        "description": "Comma-separated transport products to include."
+      },
+      "locale": {
+        "type": "string",
+        "title": "Locale",
+        "default": "de-DE"
+      },
+      "timeZone": {
+        "type": "string",
+        "format": "timezone",
+        "title": "Time zone",
+        "default": "Europe/Berlin"
+      },
+      "showCancelled": {
+        "type": "boolean",
+        "title": "Show cancelled departures",
+        "default": true
+      },
+      "showPlatformChanges": {
+        "type": "boolean",
+        "title": "Highlight platform changes",
+        "default": true
+      },
+      "destination": {
+        "type": "string",
+        "title": "Destination / via station",
+        "default": "",
+        "description": "Optional station served after departure, e.g. Basel SBB. Includes direct trains continuing beyond this station; no transfers."
+      }
+    }
+  },
+  "language": [
+    "en",
+    "de",
+    "fr",
+    "es",
+    "it"
+  ]
+}

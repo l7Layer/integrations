@@ -1,0 +1,9 @@
+{
+  "title": "Raamatun jakeet",
+  "loading": "Ladataan...",
+  "fallback": "Offline-jae",
+  "source": "Lähde",
+  "errorTitle": "Jaetta ei voitu ladata",
+  "qrAlt": "QR-koodi lähdejakeelle",
+  "apiFailed": "API epäonnistui tilakoodilla {status}"
+}

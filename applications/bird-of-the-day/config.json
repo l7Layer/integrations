@@ -1,0 +1,223 @@
+{
+  "name": "Bird of the Day",
+  "version": "0.1.0",
+  "status": "alpha",
+  "description": "Shows one deterministic daily bird with clean side-profile artwork and compact Wikipedia-sourced facts.",
+  "renderPage": "./render.html",
+  "icon": "./assets/icon.png",
+  "nativeSettings": {
+    "color": "light",
+    "region": "any",
+    "habitat": "any",
+    "birdId": "",
+    "seed": "",
+    "showRange": true,
+    "showWingspan": true,
+    "showCall": true,
+    "showDiet": true,
+    "showConservation": true,
+    "showMigration": true,
+    "showScientificName": false,
+    "showHabitat": false,
+    "showSize": false,
+    "showNesting": false,
+    "showOrder": false,
+    "textSize": "middle",
+    "showHeader": true,
+    "showFactCount": false,
+    "showRotationCount": false
+  },
+  "configVariants": [
+    {
+      "color": "light",
+      "region": "any",
+      "habitat": "any",
+      "birdId": "",
+      "seed": "",
+      "showRange": true,
+      "showWingspan": true,
+      "showCall": true,
+      "showDiet": true,
+      "showConservation": true,
+      "showMigration": true,
+      "showScientificName": false,
+      "showHabitat": false,
+      "showSize": false,
+      "showNesting": false,
+      "showOrder": false,
+      "screenshots": {
+        "800x480": "./screenshots/bird-of-the-day-800x480-landscape.png",
+        "480x800": "./screenshots/bird-of-the-day-480x800-portrait.png",
+        "1600x1200": "./screenshots/bird-of-the-day-1600x1200-landscape.png",
+        "1200x1600": "./screenshots/bird-of-the-day-1200x1600-portrait.png"
+      },
+      "textSize": "middle",
+      "showHeader": true,
+      "showFactCount": false,
+      "showRotationCount": false
+    },
+    {
+      "color": "dark",
+      "region": "europe",
+      "habitat": "any",
+      "birdId": "barn-swallow",
+      "seed": "paperlesspaper",
+      "showRange": true,
+      "showWingspan": true,
+      "showCall": true,
+      "showDiet": true,
+      "showConservation": true,
+      "showMigration": true,
+      "showScientificName": false,
+      "showHabitat": false,
+      "showSize": false,
+      "showNesting": false,
+      "showOrder": false,
+      "screenshots": {
+        "800x480": "./screenshots/bird-of-the-day-swallow-800x480-landscape.png",
+        "480x800": "./screenshots/bird-of-the-day-swallow-480x800-portrait.png",
+        "1600x1200": "./screenshots/bird-of-the-day-swallow-1600x1200-landscape.png",
+        "1200x1600": "./screenshots/bird-of-the-day-swallow-1200x1600-portrait.png"
+      },
+      "textSize": "middle",
+      "showHeader": true,
+      "showFactCount": false,
+      "showRotationCount": false
+    }
+  ],
+  "formSchema": {
+    "type": "object",
+    "properties": {
+      "region": {
+        "type": "string",
+        "title": "Region",
+        "enum": [
+          "any",
+          "europe",
+          "americas",
+          "asia",
+          "africa",
+          "oceanic",
+          "worldwide"
+        ],
+        "default": "any"
+      },
+      "habitat": {
+        "type": "string",
+        "title": "Habitat",
+        "enum": [
+          "any",
+          "open-country",
+          "coast",
+          "wetland",
+          "forest",
+          "tundra",
+          "urban"
+        ],
+        "default": "any"
+      },
+      "birdId": {
+        "type": "string",
+        "title": "Pinned bird",
+        "description": "Optional bird slug, for example barn-swallow, bald-eagle, golden-pheasant, bearded-vulture, black-skimmer, burrowing-owl, sandhill-crane, or superb-starling.",
+        "default": ""
+      },
+      "seed": {
+        "type": "string",
+        "title": "Rotation seed",
+        "description": "Optional text that creates a different daily rotation.",
+        "default": ""
+      },
+      "showRange": {
+        "type": "boolean",
+        "title": "Show range",
+        "default": true
+      },
+      "showWingspan": {
+        "type": "boolean",
+        "title": "Show wingspan",
+        "default": true
+      },
+      "showCall": {
+        "type": "boolean",
+        "title": "Show call",
+        "default": true
+      },
+      "showDiet": {
+        "type": "boolean",
+        "title": "Show diet",
+        "default": true
+      },
+      "showConservation": {
+        "type": "boolean",
+        "title": "Show conservation status",
+        "default": true
+      },
+      "showMigration": {
+        "type": "boolean",
+        "title": "Show migration",
+        "default": true
+      },
+      "showScientificName": {
+        "type": "boolean",
+        "title": "Show scientific name",
+        "default": false
+      },
+      "showHabitat": {
+        "type": "boolean",
+        "title": "Show habitat",
+        "default": false
+      },
+      "showSize": {
+        "type": "boolean",
+        "title": "Show body length",
+        "default": false
+      },
+      "showNesting": {
+        "type": "boolean",
+        "title": "Show nesting",
+        "default": false
+      },
+      "showOrder": {
+        "type": "boolean",
+        "title": "Show bird order",
+        "default": false
+      },
+      "textSize": {
+        "type": "string",
+        "title": "Text size",
+        "enum": [
+          "small",
+          "middle",
+          "big"
+        ],
+        "default": "middle",
+        "description": "Larger text shows fewer facts when needed to keep the full image visible."
+      },
+      "showHeader": {
+        "type": "boolean",
+        "title": "Show header",
+        "default": true
+      },
+      "showFactCount": {
+        "type": "boolean",
+        "title": "Show fact count",
+        "description": "Show how many selected facts fit on the display. Hidden when all facts fit.",
+        "default": false
+      },
+      "showRotationCount": {
+        "type": "boolean",
+        "title": "Show rotation count",
+        "description": "Show the number of items in the current rotation. Requires the header to be enabled.",
+        "default": false
+      }
+    }
+  },
+  "language": [
+    "en",
+    "de",
+    "fr",
+    "es",
+    "it"
+  ]
+}

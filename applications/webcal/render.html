@@ -1,0 +1,509 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="paperless:epd-optimize" content='{"intent":"readable"}' />
+    <title>WebCal Rolling Week</title>
+
+    <link rel="stylesheet" href="/assets/paperless.css?v=0.1.3-calendar-api" />
+    <script src="/assets/paperless.iife.js?v=0.1.3-calendar-api"></script>
+
+    <style>
+      /* Overall typography */
+      body,
+      #app,
+      .pp-cal--view-rolling-week {
+        font-family: Georgia, "Times New Roman", serif !important;
+        color: #111 !important;
+      }
+
+      /* Calendar headings */
+      .pp-cal--view-rolling-week .pp-cal-title,
+      .pp-cal--view-rolling-week .pp-cal-subtitle,
+      .pp-cal--view-rolling-week .pp-cal-week-heading {
+        font-family: Georgia, "Times New Roman", serif !important;
+        font-weight: normal !important;
+      }
+
+      /* Day headings */
+      .pp-cal--view-rolling-week .pp-cal-week-heading {
+        background: #fff !important;
+        color: #111 !important;
+        border-bottom: 1px solid #555 !important;
+      }
+
+      /* Today: subtle underline, no filled background */
+      .pp-cal--view-rolling-week .pp-cal-week-heading.is-today {
+        background: #fff !important;
+        color: #111 !important;
+        box-shadow: inset 0 -2px #111 !important;
+      }
+
+
+      /* Today is the first day in this rolling view, so no extra highlight is needed. */
+      .pp-cal--view-rolling-week .pp-cal-week-heading.is-today {
+        box-shadow: none !important;
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-week-cell.is-today {
+        box-shadow: none !important;
+      }
+
+      /* Current time marker, shown only in today's column. */
+      .pp-cal--view-rolling-week .pp-cal-week-grid {
+        position: relative;
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-week-now {
+        position: absolute;
+        z-index: 20;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #555;
+        pointer-events: none;
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-week-now::before {
+        content: "";
+        position: absolute;
+        left: -3px;
+        top: 50%;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #111;
+        transform: translateY(-50%);
+      }
+
+      /* Calendar grid */
+      .pp-cal--view-rolling-week .pp-cal-week-cell,
+      .pp-cal--view-rolling-week .pp-cal-week-all-day-events {
+        border-color: #aaa !important;
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-hour-rule {
+        border-top: 1px solid #ddd !important;
+      }
+
+      /* Events: white background, thin outline */
+      .pp-cal--view-rolling-week .pp-cal-week-slot .pp-cal-event,
+      .pp-cal--view-rolling-week .pp-cal-week-all-day .pp-cal-event {
+        background: #fff !important;
+        background-color: #fff !important;
+        color: #111 !important;
+        border: 1px solid #333 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+      }
+
+      /* Event text */
+      .pp-cal--view-rolling-week .pp-cal-event-title {
+        font-family: Georgia, "Times New Roman", serif !important;
+        font-weight: normal !important;
+        color: #111 !important;
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-event-time {
+        font-family: Georgia, "Times New Roman", serif !important;
+        font-size: 0.85em !important;
+        color: #333 !important;
+      }
+
+      /* Remove coloured event indicators */
+      .pp-cal--view-rolling-week .has-source-color {
+        background: #fff !important;
+        background-color: #fff !important;
+        color: #111 !important;
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-week {
+        --pp-cal-gutter: calc(
+          clamp(64px, 6vw, 88px) * 1.15 * var(--pp-cal-font-scale, 1) *
+            var(--webcal-time-scale, 1)
+        );
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-week-heading {
+        font-size: clamp(
+          0.9em,
+          calc(1em * var(--webcal-time-scale, 1)),
+          1.2em
+        );
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-rolling-number {
+        font-size: clamp(
+          1.8em,
+          calc(2.2em * var(--webcal-time-scale, 1)),
+          2.6em
+        );
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-week-slot .pp-cal-event-title,
+      .pp-cal--view-rolling-week .pp-cal-week-all-day .pp-cal-event-title {
+        font-size: clamp(
+          0.78em,
+          calc(0.92em * var(--webcal-time-scale, 1)),
+          1.15em
+        );
+        overflow-wrap: anywhere;
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-week-slot .pp-cal-event-time {
+        font-size: clamp(
+          0.7em,
+          calc(0.85em * var(--webcal-time-scale, 1)),
+          1em
+        );
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-hour,
+      .pp-cal--view-rolling-week .pp-cal-week-all-day-label {
+        font-size: clamp(
+          0.65em,
+          calc(0.75em * var(--webcal-time-scale, 1)),
+          0.95em
+        ) !important;
+      }
+
+      .pp-cal--view-rolling-week .pp-cal-week-all-day-label {
+        align-self: center;
+        padding-right: 6px;
+        font-family: Georgia, "Times New Roman", serif !important;
+        font-weight: 600 !important;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      @media (orientation: landscape) and (max-width: 900px) {
+        .pp-cal--view-rolling-week {
+          --pp-cal-edge-x: 7px;
+        }
+      }
+
+      /* Portrait keeps the first five rolling days in one readable row. */
+      @media (orientation: portrait) {
+        .pp-cal--view-rolling-week .pp-cal-rolling-grid-wide {
+          display: block !important;
+        }
+
+        .pp-cal--view-rolling-week .pp-cal-rolling-grid-stacked {
+          display: none !important;
+        }
+
+        .pp-cal--view-rolling-week .pp-cal-week {
+          --pp-cal-days: 5 !important;
+        }
+
+        .pp-cal--view-rolling-week .pp-cal-week-head > .pp-cal-week-heading:nth-child(n + 7),
+        .pp-cal--view-rolling-week .pp-cal-week-all-day > .pp-cal-week-all-day-events:nth-child(n + 7),
+        .pp-cal--view-rolling-week .pp-cal-week-grid > .pp-cal-week-cell:nth-child(n + 7),
+        .pp-cal--view-rolling-week .pp-cal-week-overflow > .pp-cal-more:nth-child(n + 7) {
+          display: none !important;
+        }
+
+        .pp-cal--view-rolling-week .pp-cal-week-head > .pp-cal-week-heading:nth-child(6),
+        .pp-cal--view-rolling-week .pp-cal-week-all-day > .pp-cal-week-all-day-events:nth-child(6),
+        .pp-cal--view-rolling-week .pp-cal-week-grid > .pp-cal-week-cell:nth-child(6) {
+          border-right: 1px solid #aaa !important;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="website-has-loading-element"></div>
+    <main id="app" aria-live="polite"></main>
+
+    <script type="module">
+      import {
+        calculateTypographyScale,
+        calculateWeekTimeRange,
+        formatHourLabel,
+        getTimedEventSlots,
+      } from "./assets/calendar-layout.js";
+
+      (() => {
+        const { bootCalendarApiIntegration } =
+          window.PaperlessOpenIntegration;
+
+        const defaults = {
+          color: "light",
+          title: "Family Calendar",
+          feedUrl:
+            "https://demo.digital-peak.com/dpc/index.php?option=com_dpcalendar&task=ical.download&format=raw&id=494",
+          username: "",
+          password: "",
+          allowHttp: false,
+          view: "rolling-week",
+          locale: "de-DE",
+          timeZone: "Europe/Berlin",
+          dayRange: 7,
+          maxEvents: 30,
+          highlightToday: true,
+          highlightScale: 1,
+          showLocation: true,
+          showEventIcons: false,
+          showEventImages: false,
+          sampleData: false,
+          now: "",
+        };
+
+        function text(value, fallback = "") {
+          return typeof value === "string" && value.trim()
+            ? value.trim()
+            : fallback;
+        }
+
+        let calendarRange;
+        let calendarLocale = defaults.locale;
+        let calendarTimeZone = defaults.timeZone;
+        let calendarEvents = [];
+
+        function setStyle(element, property, value) {
+          if (element.style.getPropertyValue(property) !== value) {
+            element.style.setProperty(property, value);
+          }
+        }
+
+        function applyDynamicTimeRange() {
+          for (const week of app.querySelectorAll(
+            ".pp-cal--view-rolling-week .pp-cal-rolling-grid-wide .pp-cal-week",
+          )) {
+            const cells = Array.from(
+              week.querySelectorAll(".pp-cal-week-grid > .pp-cal-week-cell"),
+            );
+            const visibleCells = cells.filter(
+              (cell) => getComputedStyle(cell).display !== "none",
+            );
+            const allSlots = getTimedEventSlots(
+              calendarEvents,
+              calendarRange.dateKeys,
+              calendarTimeZone,
+            );
+            const visibleSlots = getTimedEventSlots(
+              calendarEvents,
+              visibleCells.map((cell) => cell.dataset.date),
+              calendarTimeZone,
+            );
+            const { startHour, endHour } = calculateWeekTimeRange(
+              allSlots,
+              visibleSlots,
+            );
+            const visibleDates = visibleCells
+              .map((cell) => cell.dataset.date)
+              .join(",");
+            const signature = `${startHour}-${endHour}-${visibleDates}`;
+            if (week.dataset.webcalTimeRange === signature) continue;
+
+            week.dataset.webcalStartHour = String(startHour);
+            week.dataset.webcalEndHour = String(endHour);
+            const durationHours = endHour - startHour;
+            const scale = calculateTypographyScale(durationHours);
+            setStyle(week, "--pp-cal-hours", String(durationHours));
+            setStyle(week, "--webcal-time-scale", String(scale));
+
+            const labelsContainer = week.querySelector(".pp-cal-week-hours");
+            const labels = Array.from(
+              labelsContainer.querySelectorAll(".pp-cal-hour"),
+            );
+            const labelTemplate = labels[0];
+            const labelCount = durationHours + 1;
+            while (labels.length > labelCount) {
+              labels.pop().remove();
+            }
+            while (labels.length < labelCount) {
+              labels.push(labelTemplate.cloneNode(true));
+              labelsContainer.append(labels.at(-1));
+            }
+            labels.forEach((label, index) => {
+              const hour = startHour + index;
+              const top = `${(index / durationHours) * 100}%`;
+              const text = formatHourLabel(hour, calendarLocale);
+              if (label.textContent !== text) label.textContent = text;
+              if (label.style.top !== top) label.style.top = top;
+            });
+
+            for (const cell of cells) {
+              const rules = Array.from(
+                cell.querySelectorAll(":scope > .pp-cal-hour-rule"),
+              );
+              const ruleTemplate = rules[0];
+              while (rules.length > durationHours) {
+                rules.pop().remove();
+              }
+              while (rules.length < durationHours) {
+                rules.push(ruleTemplate.cloneNode(true));
+                cell.insertBefore(
+                  rules.at(-1),
+                  cell.querySelector(".pp-cal-week-slot"),
+                );
+              }
+              rules.forEach((rule, index) => {
+                const top = `${(index / durationHours) * 100}%`;
+                if (rule.style.top !== top) rule.style.top = top;
+              });
+
+              for (const slot of cell.querySelectorAll(".pp-cal-week-slot")) {
+                const start = Number(slot.dataset.start);
+                const end = Number(slot.dataset.end);
+                const top = `${((start - startHour * 60) / (durationHours * 60)) * 100}%`;
+                const height = `${((end - start) / (durationHours * 60)) * 100}%`;
+                if (slot.style.top !== top) slot.style.top = top;
+                if (slot.style.height !== height) slot.style.height = height;
+              }
+            }
+
+            week.dataset.webcalTimeRange = signature;
+          }
+        }
+
+        function getZonedDateParts(date, timeZone) {
+          const parts = new Intl.DateTimeFormat("en-CA", {
+            timeZone,
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hourCycle: "h23",
+          }).formatToParts(date);
+          return Object.fromEntries(
+            parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]),
+          );
+        }
+
+        function updateCurrentTimeIndicator() {
+          const now = new Date();
+          const parts = getZonedDateParts(now, calendarTimeZone);
+          const todayKey = `${parts.year}-${parts.month}-${parts.day}`;
+          const nowMinutes = Number(parts.hour) * 60 + Number(parts.minute);
+
+          for (const week of app.querySelectorAll(
+            ".pp-cal--view-rolling-week .pp-cal-rolling-grid-wide .pp-cal-week",
+          )) {
+            const todayHeading = week.querySelector(
+              ".pp-cal-week-heading.is-today .pp-cal-column-weekday",
+            );
+            if (todayHeading && todayHeading.textContent !== "HEUTE") {
+              todayHeading.textContent = "HEUTE";
+            }
+
+            const grid = week.querySelector(".pp-cal-week-grid");
+            const existingMarker = week.querySelector(".pp-cal-week-now");
+            if (!grid) {
+              existingMarker?.remove();
+              continue;
+            }
+
+            const startHour = Number(week.dataset.webcalStartHour);
+            const endHour = Number(week.dataset.webcalEndHour);
+            const isVisible =
+              Number.isFinite(startHour) &&
+              Number.isFinite(endHour) &&
+              endHour > startHour &&
+              nowMinutes >= startHour * 60 &&
+              nowMinutes <= endHour * 60;
+
+            if (!isVisible) {
+              existingMarker?.remove();
+              continue;
+            }
+
+            const top = `${((nowMinutes - startHour * 60) / ((endHour - startHour) * 60)) * 100}%`;
+            const marker = existingMarker || document.createElement("div");
+            if (!existingMarker) {
+              marker.className = "pp-cal-week-now";
+              marker.setAttribute("aria-hidden", "true");
+            }
+            if (marker.parentElement !== grid) grid.append(marker);
+            if (marker.style.top !== top) marker.style.top = top;
+          }
+        }
+
+        function formatRangeTitle(range, locale) {
+          const [startYear, startMonth, startDay] = range.startKey
+            .split("-")
+            .map(Number);
+          const [endYear, endMonth, endDay] = range.endKey
+            .split("-")
+            .map(Number);
+          const inclusiveEnd = new Date(
+            Date.UTC(endYear, endMonth - 1, endDay - 1),
+          );
+          const lastYear = inclusiveEnd.getUTCFullYear();
+          const lastMonth = inclusiveEnd.getUTCMonth() + 1;
+          const lastDay = inclusiveEnd.getUTCDate();
+          const monthName = (year, month) =>
+            new Intl.DateTimeFormat(locale, {
+              month: "long",
+              timeZone: "UTC",
+            }).format(new Date(Date.UTC(year, month - 1, 1)));
+          const firstMonthName = monthName(startYear, startMonth);
+          const lastMonthName = monthName(lastYear, lastMonth);
+
+          if (startYear === lastYear && startMonth === lastMonth) {
+            return `${startDay} – ${lastDay} ${lastMonthName}`;
+          }
+          if (startYear === lastYear) {
+            return `${startDay} ${firstMonthName} – ${lastDay} ${lastMonthName}`;
+          }
+          return `${startDay} ${firstMonthName} ${startYear} – ${lastDay} ${lastMonthName} ${lastYear}`;
+        }
+
+        const app = document.querySelector("#app");
+        new MutationObserver(() => {
+          const heading = app.querySelector(".pp-cal-range-title");
+          if (!heading || !calendarRange) return;
+
+          const title = formatRangeTitle(calendarRange, calendarLocale);
+          if (heading.textContent !== title) {
+            heading.textContent = title;
+          }
+          applyDynamicTimeRange();
+          updateCurrentTimeIndicator();
+        }).observe(app, { childList: true, subtree: true });
+        window.addEventListener("resize", () => {
+          applyDynamicTimeRange();
+          updateCurrentTimeIndicator();
+        });
+        window.setInterval(updateCurrentTimeIndicator, 30_000);
+
+        window.__paperlessRenderDone = bootCalendarApiIntegration({
+          defaults,
+          fallbackTitle: "Family Calendar",
+
+          buildRequest({ mergedSettings, range, settings }) {
+            calendarRange = range;
+            calendarLocale = settings.locale;
+            calendarTimeZone = settings.timeZone;
+            return {
+              feedUrl: mergedSettings.feedUrl,
+              username: mergedSettings.username,
+              password: mergedSettings.password,
+              allowHttp: mergedSettings.allowHttp,
+              rangeStart: range.startKey,
+              rangeEndExclusive: range.endKey,
+              timeZone: settings.timeZone,
+              limit: 500,
+              sampleData: mergedSettings.sampleData,
+              now: mergedSettings.now,
+            };
+          },
+
+          resolveHeader({ data, mergedSettings, messages }) {
+            calendarEvents = Array.isArray(data.events) ? data.events : [];
+            return {
+              kicker: text(messages.kicker, "Calendar"),
+              title: text(mergedSettings.title, "Family Calendar"),
+              subtitle: text(data.calendarName),
+            };
+          },
+        });
+      })();
+    </script>
+  </body>
+</html>

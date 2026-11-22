@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="paperless:epd-optimize" content='{"intent":"readable"}' />
+    <title>Countdown Card</title>
+    <link rel="stylesheet" href="/assets/paperless.css" />
+    <script src="/assets/paperless.iife.js"></script>
+    <style>
+      .countdown-screen {
+        --countdown-accent-soft: color-mix(in srgb, var(--pp-accent) 18%, var(--pp-card));
+        padding: 24px;
+        gap: 16px;
+      }
+
+      .countdown-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 16px;
+        align-items: end;
+        padding-bottom: 13px;
+        border-bottom: 3px solid var(--pp-border);
+      }
+
+      .countdown-title {
+        margin: 0;
+        font-size: clamp(2.15rem, 8vh, 4.7rem);
+        line-height: 0.92;
+        font-weight: 950;
+        letter-spacing: 0;
+        overflow-wrap: anywhere;
+      }
+
+      .countdown-state {
+        min-width: 118px;
+        padding: 9px 12px;
+        border: 3px solid currentColor;
+        background: var(--countdown-accent-soft);
+        font-size: 1.06rem;
+        line-height: 1;
+        font-weight: 880;
+        text-align: center;
+        text-transform: uppercase;
+      }
+
+      .countdown-main {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) auto;
+        align-content: stretch;
+        gap: 20px;
+      }
+
+      .countdown-values {
+        display: grid;
+        grid-template-columns: 1.25fr 1fr 1fr;
+        gap: 10px;
+        height: 100%;
+        min-height: 0;
+      }
+
+      .countdown-values.days-only {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr);
+      }
+
+      .countdown-unit {
+        min-width: 0;
+        min-height: 0;
+        display: grid;
+        grid-template-rows: minmax(0, 1fr) auto;
+        align-content: stretch;
+        gap: 8px;
+        padding: 16px 12px;
+        border: 3px solid var(--pp-border);
+        background: var(--pp-card);
+        overflow: hidden;
+        text-align: center;
+      }
+
+      .countdown-number-wrap {
+        min-width: 0;
+        min-height: 0;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+      }
+
+      .countdown-number {
+        display: block;
+        width: 100%;
+        font-size: 9.8rem;
+        line-height: 0.8;
+        font-weight: 980;
+        letter-spacing: 0;
+        white-space: nowrap;
+      }
+
+      .days-only .countdown-number {
+        font-size: 15rem;
+      }
+
+      .countdown-label {
+        color: var(--pp-muted);
+        font-size: 1rem;
+        line-height: 1;
+        font-weight: 850;
+        text-transform: uppercase;
+      }
+
+      .countdown-meta {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(160px, 0.42fr);
+        gap: 14px;
+        align-items: stretch;
+      }
+
+      .countdown-meta.progress-hidden {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .date-card,
+      .progress-card {
+        min-width: 0;
+        padding: 13px 14px;
+        border: 2px solid var(--pp-border);
+        background: var(--pp-card);
+      }
+
+      .meta-label,
+      .progress-label {
+        margin: 0 0 7px;
+        color: var(--pp-muted);
+        font-size: 0.78rem;
+        line-height: 1;
+        font-weight: 850;
+        text-transform: uppercase;
+      }
+
+      .meta-date {
+        margin: 0;
+        font-size: 1.42rem;
+        line-height: 1.05;
+        font-weight: 860;
+        overflow-wrap: anywhere;
+      }
+
+      .progress-track {
+        height: 16px;
+        border: 2px solid currentColor;
+        background: var(--pp-background);
+      }
+
+      .progress-fill {
+        width: 0%;
+        height: 100%;
+        background: var(--pp-accent);
+      }
+
+      .progress-value {
+        margin: 8px 0 0;
+        font-size: 1.25rem;
+        line-height: 1;
+        font-weight: 900;
+      }
+
+      .is-hidden {
+        display: none;
+      }
+
+      @media (min-width: 900px) and (min-height: 900px) {
+        .countdown-screen {
+          padding: 36px;
+          gap: 24px;
+        }
+
+        .countdown-header {
+          gap: 24px;
+          padding-bottom: 20px;
+          border-bottom-width: 5px;
+        }
+
+        .countdown-state {
+          min-width: 170px;
+          padding: 14px 18px;
+          border-width: 4px;
+          font-size: 1.45rem;
+        }
+
+        .countdown-main {
+          gap: 26px;
+        }
+
+        .countdown-values {
+          gap: 18px;
+        }
+
+        .countdown-unit {
+          gap: 14px;
+          padding: 24px 18px;
+          border-width: 5px;
+        }
+
+        .countdown-label {
+          font-size: 1.55rem;
+        }
+
+        .countdown-meta {
+          grid-template-columns: minmax(0, 1fr) minmax(250px, 0.42fr);
+          gap: 20px;
+        }
+
+        .date-card,
+        .progress-card {
+          padding: 20px 22px;
+          border-width: 3px;
+        }
+
+        .meta-label,
+        .progress-label {
+          margin-bottom: 11px;
+          font-size: 1.05rem;
+        }
+
+        .meta-date {
+          font-size: 2.05rem;
+        }
+
+        .progress-track {
+          height: 24px;
+          border-width: 3px;
+        }
+
+        .progress-value {
+          margin-top: 12px;
+          font-size: 1.7rem;
+        }
+      }
+
+      @media (orientation: portrait) {
+        .countdown-screen {
+          padding: 22px;
+          gap: 14px;
+        }
+
+        .countdown-header {
+          grid-template-columns: minmax(0, 1fr);
+          align-items: start;
+          gap: 10px;
+        }
+
+        .countdown-state {
+          min-width: 0;
+          justify-self: start;
+        }
+
+        .countdown-main {
+          align-content: stretch;
+          gap: 16px;
+        }
+
+        .countdown-values {
+          grid-template-columns: minmax(0, 1fr);
+          grid-template-rows: 1.35fr 1fr 1fr;
+        }
+
+        .countdown-unit {
+          padding: 13px;
+        }
+
+        .countdown-meta {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 10px;
+        }
+      }
+
+      @media (max-width: 700px), (max-height: 560px) {
+        .countdown-screen {
+          padding: 16px;
+          gap: 11px;
+        }
+
+        .countdown-header {
+          padding-bottom: 10px;
+          gap: 10px;
+          border-bottom-width: 2px;
+        }
+
+        .countdown-title {
+          font-size: clamp(1.9rem, 8vh, 3.7rem);
+        }
+
+        .countdown-state {
+          padding: 7px 10px;
+          border-width: 2px;
+          font-size: 0.8rem;
+        }
+
+        .countdown-main {
+          gap: 12px;
+        }
+
+        .countdown-values {
+          gap: 8px;
+        }
+
+        .countdown-unit {
+          gap: 6px;
+          padding: 10px 8px;
+          border-width: 2px;
+        }
+
+        .countdown-label,
+        .meta-label,
+        .progress-label {
+          font-size: 0.68rem;
+        }
+
+        .meta-date {
+          font-size: 1.02rem;
+        }
+
+        .date-card,
+        .progress-card {
+          padding: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="website-has-loading-element"></div>
+    <main class="pp-screen countdown-screen" id="screen">
+      <header class="countdown-header">
+        <h1 class="countdown-title pp-fit" id="title">Countdown Card</h1>
+        <div class="countdown-state" id="stateLabel">Until</div>
+      </header>
+
+      <section class="countdown-main">
+        <div class="countdown-values" id="values">
+          <article class="countdown-unit">
+            <div class="countdown-number-wrap">
+              <span class="countdown-number pp-fit" id="days">0</span>
+            </div>
+            <span class="countdown-label" id="daysLabel">Days</span>
+          </article>
+          <article class="countdown-unit time-unit" id="hoursUnit">
+            <div class="countdown-number-wrap">
+              <span class="countdown-number pp-fit" id="hours">0</span>
+            </div>
+            <span class="countdown-label" id="hoursLabel">Hours</span>
+          </article>
+          <article class="countdown-unit time-unit" id="minutesUnit">
+            <div class="countdown-number-wrap">
+              <span class="countdown-number pp-fit" id="minutes">0</span>
+            </div>
+            <span class="countdown-label" id="minutesLabel">Minutes</span>
+          </article>
+        </div>
+
+        <div class="countdown-meta" id="meta">
+          <article class="date-card">
+            <p class="meta-label" id="dateLabel">Target</p>
+            <p class="meta-date" id="dateValue">2030-01-01</p>
+          </article>
+          <article class="progress-card" id="progressCard">
+            <p class="progress-label" id="progressLabel">Progress</p>
+            <div class="progress-track" aria-hidden="true">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p class="progress-value" id="progressValue">0%</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      (async function render() {
+        const {
+          waitForPayload,
+          getSettings,
+          getQuerySettings,
+          mergeSettings,
+          loadLanguageJson,
+          applyColorTheme,
+          fitHyphenatedText,
+          fitToScreen,
+          escapeHtml,
+          markLoading,
+          markReady,
+          markError,
+        } = window.PaperlessOpenIntegration;
+
+        const defaults = {
+          color: "light",
+          title: "Launch Day",
+          targetDate: "2030-01-01T00:00:00",
+          mode: "auto",
+          showTime: true,
+          showProgress: true,
+          startDate: "2026-01-01T00:00:00",
+          dateLabel: "Target",
+        };
+
+        const fallbackMessages = {
+          defaultTitle: "Launch Day",
+          sinceOpeningTitle: "Since Opening",
+          openedDateLabel: "Opened",
+          untilLabel: "Until",
+          sinceLabel: "Since",
+          pastTargetLabel: "Past target",
+          futureSinceLabel: "Starts in",
+          daysLabel: "Days",
+          hoursLabel: "Hours",
+          minutesLabel: "Minutes",
+          progressLabel: "Progress",
+          targetDateLabel: "Target",
+          invalidDateTitle: "Invalid target date",
+          invalidDateMessage: "Set a valid targetDate in settings.",
+          errorTitle: "Countdown Card could not load",
+        };
+
+        function asBoolean(value, fallback) {
+          if (value === true || value === "true") return true;
+          if (value === false || value === "false") return false;
+          return fallback;
+        }
+
+        function parseLocalDate(value) {
+          const raw = String(value || "").trim();
+          if (!raw) return null;
+          const dateOnly = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+          if (dateOnly) {
+            const date = new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]), 0, 0, 0, 0);
+            return Number.isNaN(date.getTime()) ? null : date;
+          }
+          const dateTime = raw.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/);
+          if (dateTime) {
+            const date = new Date(
+              Number(dateTime[1]),
+              Number(dateTime[2]) - 1,
+              Number(dateTime[3]),
+              Number(dateTime[4]),
+              Number(dateTime[5]),
+              Number(dateTime[6] || 0),
+              0,
+            );
+            return Number.isNaN(date.getTime()) ? null : date;
+          }
+          const parsed = new Date(raw);
+          return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+
+        function formatDate(date, language) {
+          const hasTime = date.getHours() || date.getMinutes() || date.getSeconds();
+          return new Intl.DateTimeFormat(language || "en", {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            hour: hasTime ? "2-digit" : undefined,
+            minute: hasTime ? "2-digit" : undefined,
+          }).format(date);
+        }
+
+        function setText(id, value) {
+          document.getElementById(id).textContent = value;
+        }
+
+        function localizedSetting(value, defaultValue, translatedDefault, translations = {}) {
+          const text = String(value || "").trim();
+          if (!text || text === defaultValue) {
+            return translatedDefault || defaultValue;
+          }
+          return translations[text] || text;
+        }
+
+        function clamp(value, min, max) {
+          return Math.min(max, Math.max(min, value));
+        }
+
+        let messages = fallbackMessages;
+
+        async function renderPayload(payload) {
+          try {
+            markLoading?.();
+            const settings = mergeSettings(defaults, getSettings(payload), getQuerySettings());
+            const languageResult = await loadLanguageJson(payload).catch(() => ({ language: "en", messages: {} }));
+            messages = { ...fallbackMessages, ...(languageResult.messages || {}) };
+            const language = languageResult.language || "en";
+            document.documentElement.lang = language;
+
+            applyColorTheme(settings.color, { defaultTheme: defaults.color });
+
+            const now = new Date();
+            const targetDate = parseLocalDate(settings.targetDate);
+            if (!targetDate) {
+              throw new Error(messages.invalidDateMessage);
+            }
+
+            const requestedMode = ["auto", "until", "since"].includes(settings.mode) ? settings.mode : defaults.mode;
+            const effectiveMode = requestedMode === "auto" ? (now <= targetDate ? "until" : "since") : requestedMode;
+            const rawDiff = effectiveMode === "until" ? targetDate.getTime() - now.getTime() : now.getTime() - targetDate.getTime();
+            const crossed = rawDiff < 0;
+            const diff = Math.abs(rawDiff);
+            const totalMinutes = Math.floor(diff / 60000);
+            const days = Math.floor(totalMinutes / 1440);
+            const hours = Math.floor((totalMinutes % 1440) / 60);
+            const minutes = totalMinutes % 60;
+            const showTime = asBoolean(settings.showTime, defaults.showTime);
+            const showProgress = asBoolean(settings.showProgress, defaults.showProgress);
+
+            const title = localizedSetting(settings.title, defaults.title, messages.defaultTitle, {
+              "Since Opening": messages.sinceOpeningTitle,
+            });
+            const dateLabel = localizedSetting(settings.dateLabel, defaults.dateLabel, messages.targetDateLabel, {
+              Opened: messages.openedDateLabel,
+            });
+            const stateLabel = effectiveMode === "until"
+              ? (crossed ? messages.pastTargetLabel : messages.untilLabel)
+              : (crossed ? messages.futureSinceLabel : messages.sinceLabel);
+
+            setText("title", title);
+            setText("stateLabel", stateLabel);
+            setText("days", String(days));
+            setText("hours", String(hours).padStart(2, "0"));
+            setText("minutes", String(minutes).padStart(2, "0"));
+            setText("daysLabel", messages.daysLabel);
+            setText("hoursLabel", messages.hoursLabel);
+            setText("minutesLabel", messages.minutesLabel);
+            setText("dateLabel", dateLabel);
+            setText("dateValue", formatDate(targetDate, language));
+            setText("progressLabel", messages.progressLabel);
+
+            const values = document.getElementById("values");
+            values.classList.toggle("days-only", !showTime);
+            document.getElementById("hoursUnit").classList.toggle("is-hidden", !showTime);
+            document.getElementById("minutesUnit").classList.toggle("is-hidden", !showTime);
+
+            const startDate = parseLocalDate(settings.startDate);
+            const progressCard = document.getElementById("progressCard");
+            if (showProgress && startDate && startDate.getTime() !== targetDate.getTime()) {
+              const elapsed = now.getTime() - startDate.getTime();
+              const duration = targetDate.getTime() - startDate.getTime();
+              const ratio = duration === 0 ? 1 : elapsed / duration;
+              const percent = Math.round(clamp(ratio, 0, 1) * 100);
+              document.getElementById("progressFill").style.width = percent + "%";
+              setText("progressValue", percent + "%");
+              progressCard.classList.remove("is-hidden");
+            } else {
+              progressCard.classList.add("is-hidden");
+            }
+            document.getElementById("meta").classList.toggle(
+              "progress-hidden",
+              progressCard.classList.contains("is-hidden"),
+            );
+
+            await document.fonts?.ready;
+            const largeFrame = Math.min(window.innerWidth, window.innerHeight) >= 900;
+            fitHyphenatedText(document.getElementById("title"), {
+              min: 22,
+              max: largeFrame ? 132 : 82,
+              step: 1,
+              tolerance: 8,
+            });
+            document.querySelectorAll(".countdown-number").forEach((element) => {
+              const daysOnly = values.classList.contains("days-only");
+              fitHyphenatedText(element, {
+                min: 36,
+                max: largeFrame ? (daysOnly ? 560 : 420) : (daysOnly ? 230 : 190),
+                step: 2,
+                tolerance: 4,
+                nowrap: true,
+                fitParent: element.parentElement,
+              });
+            });
+            fitToScreen(document.getElementById("screen"));
+            markReady({ mode: effectiveMode, showTime, showProgress: !progressCard.classList.contains("is-hidden") });
+          } catch (error) {
+            markError(error);
+            document.body.innerHTML = `<main class="pp-screen"><h1 class="pp-title pp-error">${escapeHtml(messages.errorTitle)}</h1><p>${escapeHtml(error.message)}</p></main>`;
+          }
+        }
+
+        const payload = await waitForPayload({ timeout: 300, onUpdate: renderPayload });
+        await renderPayload(payload);
+      })();
+    </script>
+  </body>
+</html>

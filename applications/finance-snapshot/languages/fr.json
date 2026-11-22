@@ -1,0 +1,20 @@
+{
+  "loading": "Chargement...",
+  "updated": "Mis à jour",
+  "errorTitle": "L'instantané financier n'a pas pu se charger",
+  "title": "Instantané financier",
+  "subtitle": "Suivi des marchés",
+  "leader": "Plus fort mouvement",
+  "items": "Valeurs",
+  "source": "Source",
+  "delayed": "Les données de marché peuvent être différées",
+  "noData": "Aucune cotation disponible",
+  "high": "Haut",
+  "low": "Bas",
+  "range": "Période",
+  "value": "Valeur",
+  "price": "Prix",
+  "change": "Variation",
+  "unit": "Unité",
+  "apiFailed": "Échec de l'API avec le statut {status}"
+}

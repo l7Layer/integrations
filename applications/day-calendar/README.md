@@ -1,0 +1,75 @@
+---
+slug: day-calendar
+name: Day Calendar
+version: 0.1.0
+description: Shows the current day, optional time, quotes, and daily facts.
+renderPage: ./render.html
+configUrl: /day-calendar/config.json
+apiUrl: /day-calendar/api/data
+offline: true
+screenshots:
+  - ./screenshots/day-calendar-primary-dark-800x480-landscape.png
+  - ./screenshots/day-calendar-primary-dark-480x800-portrait.png
+  - ./screenshots/day-calendar-demotivational-de-800x480-landscape.png
+  - ./screenshots/day-calendar-demotivational-de-480x800-portrait.png
+  - ./screenshots/day-calendar-funny-red-800x480-landscape.png
+  - ./screenshots/day-calendar-funny-red-480x800-portrait.png
+---
+
+# Day Calendar
+
+Plain OpenIntegration version of the upstream `paperlesspaper-apps/src/components/DayCalendar` component, extended with offline daily fact modes.
+
+It keeps the same base settings (`color`, `kind`, `showTime`), the same date/time formatting behavior, and the same quote/fact arrays. Additional fact modes are selected by local day-of-year or deterministic date calculations.
+
+## Links
+
+- [Demo](https://integrations.paperlesspaper.de/day-calendar/run)
+- [config.json](./config.json)
+
+## Screenshots
+
+| Landscape | Portrait |
+| --- | --- |
+| <img src="./screenshots/day-calendar-primary-dark-800x480-landscape.png" alt="Day Calendar landscape screenshot: Primary Dark" width="360"> | <img src="./screenshots/day-calendar-primary-dark-480x800-portrait.png" alt="Day Calendar portrait screenshot: Primary Dark" width="216"> |
+| <img src="./screenshots/day-calendar-demotivational-de-800x480-landscape.png" alt="Day Calendar landscape screenshot: Demotivational De" width="360"> | <img src="./screenshots/day-calendar-demotivational-de-480x800-portrait.png" alt="Day Calendar portrait screenshot: Demotivational De" width="216"> |
+
+## Common URLs
+
+- `/day-calendar/`
+- `/day-calendar/?color=light&kind=demotivational&language=de&showTime=true`
+- `/day-calendar/?color=red-light&kind=funny&language=en-US`
+- `/day-calendar/?kind=day-progress`
+- `/day-calendar/?kind=holiday-observance&holidayRegion=DE-BE`
+- `/day-calendar/?kind=season-daylight&latitude=52.52&longitude=13.405`
+- `/day-calendar/?kind=word-phrase&language=de`
+- `/day-calendar/?kind=curiosity&language=en-US`
+- `/day-calendar/config.json`
+- `/day-calendar/api/data`
+
+## Settings
+
+- `color`: `dark`, `light`, `red-dark`, or `red-light`
+- `kind`: `primary`, `demotivational`, `funny`, `day-progress`, `holiday-observance`, `season-daylight`, `word-phrase`, or `curiosity`
+- `showTime`: optional boolean
+- `holidayRegion`: public-holiday region for `holiday-observance`; defaults to `DE-BE`
+- `latitude`: latitude for `season-daylight`; defaults to Berlin
+- `longitude`: longitude for `season-daylight`; defaults to Berlin
+
+## Language Support
+
+This integration declares `language: ["en", "de"]` in `config.json` and loads localized fixed UI copy from `languages/<code>.json` using the host-selected `payload.meta.language`.
+
+The calendar content language also follows the host-selected `payload.meta.language`. Direct preview URLs can still pass `?language=de` or `?language=en-US` to override the content language while testing.
+
+## Seven-day daylight trend
+
+`season-daylight` now calculates sunrise, sunset and daylight duration with SunCalc,
+shows the difference from yesterday, and plots the next seven days' changes relative
+to today. The `timeZone` setting defaults to `Europe/Berlin`; local-day calculations
+remain stable across daylight-saving transitions. Blue bars (orange in the dark theme)
+and an orange heading marker use Spectra 6 processing with dithering for orange.
+Polar day/night has an explicit duration and unavailable rise/set times are shown
+as a dash. These are astronomical estimates, not terrain-aware
+observations. The graph uses separate sunrise/sunset semantics, rather than ambiguous
+“sundawn/sundusk” labels.

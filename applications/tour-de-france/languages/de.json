@@ -1,0 +1,17 @@
+{
+  "loading": "Laden...",
+  "title": "Tour de France",
+  "type": "Typ",
+  "distance": "Distanz",
+  "elevation": "Hm",
+  "profile": "Profil",
+  "map": "Karte",
+  "generalRanking": "Gesamtwertung",
+  "nextStage": "Nächste Etappe",
+  "unavailableRanking": "Die Wertungen für 2026 erscheinen, sobald offizielle Rennklassifikationen verfügbar sind.",
+  "updated": "Aktualisiert",
+  "source": "Quelle",
+  "errorTitle": "Tour de France konnte nicht geladen werden",
+  "apiFailed": "API-Aufruf fehlgeschlagen ({status})",
+  "atGradient": "bei {value}"
+}

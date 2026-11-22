@@ -1,0 +1,22 @@
+{
+  "loading": "Caricamento...",
+  "kicker": "Uccello del giorno",
+  "range": "Areale",
+  "wingspan": "Apertura alare",
+  "call": "Richiamo",
+  "diet": "Dieta",
+  "conservation": "Stato",
+  "migration": "Migrazione",
+  "scientificName": "Nome scientifico",
+  "habitat": "Habitat",
+  "size": "Lunghezza",
+  "nesting": "Nidificazione",
+  "order": "Ordine",
+  "source": "Fonte",
+  "selectedFrom": "{count} nella rotazione",
+  "signature": "Nota sul campo",
+  "errorTitle": "Impossibile caricare l'uccello",
+  "imageFailed": "L'immagine dell'uccello non è stata caricata.",
+  "listFailed": "L'elenco degli uccelli non è stato caricato.",
+  "factsShown": "{shown} di {total} dati"
+}

@@ -1,0 +1,175 @@
+{
+  "name": "Dinosaur of the Day",
+  "version": "0.1.0",
+  "status": "alpha",
+  "description": "Shows one deterministic daily dinosaur with display-friendly CAD-like artwork and compact Wikipedia-sourced facts.",
+  "renderPage": "./render.html",
+  "icon": "./assets/icon.png",
+  "nativeSettings": {
+    "color": "light",
+    "group": "any",
+    "dinosaurId": "",
+    "seed": "",
+    "showPeriod": true,
+    "showLength": true,
+    "showDiet": true,
+    "showFossilLocation": true,
+    "showNameMeaning": true,
+    "showSource": false,
+    "textSize": "middle",
+    "showHeader": true,
+    "showFactCount": false,
+    "showRotationCount": false
+  },
+  "configVariants": [
+    {
+      "color": "light",
+      "group": "any",
+      "dinosaurId": "",
+      "seed": "",
+      "showPeriod": true,
+      "showLength": true,
+      "showDiet": true,
+      "showFossilLocation": true,
+      "showNameMeaning": true,
+      "showSource": false,
+      "screenshots": {
+        "800x480": "./screenshots/dinosaur-of-the-day-any-800x480-landscape.png",
+        "480x800": "./screenshots/dinosaur-of-the-day-any-480x800-portrait.png",
+        "1600x1200": "./screenshots/dinosaur-of-the-day-any-1600x1200-landscape.png",
+        "1200x1600": "./screenshots/dinosaur-of-the-day-any-1200x1600-portrait.png"
+      },
+      "textSize": "middle",
+      "showHeader": true,
+      "showFactCount": false,
+      "showRotationCount": false
+    },
+    {
+      "color": "dark",
+      "group": "theropod",
+      "dinosaurId": "spinosaurus",
+      "seed": "paperlesspaper",
+      "showPeriod": true,
+      "showLength": true,
+      "showDiet": true,
+      "showFossilLocation": true,
+      "showNameMeaning": true,
+      "showSource": true,
+      "screenshots": {
+        "800x480": "./screenshots/dinosaur-of-the-day-spinosaurus-800x480-landscape.png",
+        "480x800": "./screenshots/dinosaur-of-the-day-spinosaurus-480x800-portrait.png",
+        "1600x1200": "./screenshots/dinosaur-of-the-day-spinosaurus-1600x1200-landscape.png",
+        "1200x1600": "./screenshots/dinosaur-of-the-day-spinosaurus-1200x1600-portrait.png"
+      },
+      "textSize": "middle",
+      "showHeader": true,
+      "showFactCount": false,
+      "showRotationCount": false
+    }
+  ],
+  "formSchema": {
+    "type": "object",
+    "properties": {
+      "group": {
+        "type": "string",
+        "title": "Dinosaur group",
+        "enum": [
+          "any",
+          "theropod",
+          "ceratopsian",
+          "stegosaur",
+          "sauropod",
+          "dromaeosaur",
+          "ankylosaur",
+          "hadrosaur",
+          "ornithopod",
+          "pachycephalosaur",
+          "therizinosaur",
+          "ornithomimosaur",
+          "oviraptorosaur",
+          "titanosaur",
+          "avialan",
+          "nodosaur",
+          "spinosaurid",
+          "sauropodomorph",
+          "alvarezsaurid"
+        ],
+        "default": "any"
+      },
+      "dinosaurId": {
+        "type": "string",
+        "title": "Pinned dinosaur",
+        "description": "Optional dinosaur slug, for example true, maiasaura, plateosaurus, coelophysis, mononykus, psittacosaurus, acrocanthosaurus, mamenchisaurus, pachyrhinosaurus, amargasaurus, nigersaurus, ouranosaurus, shantungosaurus, tarbosaurus, herrerasaurus, minmi, or concavenator.",
+        "default": ""
+      },
+      "seed": {
+        "type": "string",
+        "title": "Rotation seed",
+        "description": "Optional text that creates a different daily dinosaur rotation.",
+        "default": ""
+      },
+      "showPeriod": {
+        "type": "boolean",
+        "title": "Show period",
+        "default": true
+      },
+      "showLength": {
+        "type": "boolean",
+        "title": "Show length",
+        "default": true
+      },
+      "showDiet": {
+        "type": "boolean",
+        "title": "Show diet",
+        "default": true
+      },
+      "showFossilLocation": {
+        "type": "boolean",
+        "title": "Show fossil location",
+        "default": true
+      },
+      "showNameMeaning": {
+        "type": "boolean",
+        "title": "Show name meaning",
+        "default": true
+      },
+      "showSource": {
+        "type": "boolean",
+        "title": "Show source",
+        "default": false
+      },
+      "textSize": {
+        "type": "string",
+        "title": "Text size",
+        "enum": [
+          "small",
+          "middle",
+          "big"
+        ],
+        "default": "middle",
+        "description": "Larger text shows fewer facts when needed to keep the full image visible."
+      },
+      "showHeader": {
+        "type": "boolean",
+        "title": "Show header",
+        "default": true
+      },
+      "showFactCount": {
+        "type": "boolean",
+        "title": "Show fact count",
+        "description": "Show how many selected facts fit on the display. Hidden when all facts fit.",
+        "default": false
+      },
+      "showRotationCount": {
+        "type": "boolean",
+        "title": "Show rotation count",
+        "description": "Show the number of items in the current rotation. Requires the header to be enabled.",
+        "default": false
+      }
+    }
+  },
+  "language": [
+    "en",
+    "de"
+  ]
+}

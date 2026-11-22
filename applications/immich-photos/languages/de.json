@@ -1,0 +1,11 @@
+{
+  "loading": "Wird geladen...",
+  "updated": "Aktualisiert",
+  "from": "von",
+  "errorTitle": "Immich konnte nicht geladen werden",
+  "apiFailed": "Immich-Anfrage fehlgeschlagen ({status})",
+  "title": "Immich-Fotos",
+  "fallbackCaption": "Immich-Foto",
+  "imageFailed": "Das aufgelöste Immich-Bild konnte nicht geladen werden.",
+  "photoDetailsLabel": "Fotodetails"
+}

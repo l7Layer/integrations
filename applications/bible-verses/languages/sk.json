@@ -1,0 +1,9 @@
+{
+  "title": "Biblické verše",
+  "loading": "Načítava sa...",
+  "fallback": "Offline verš",
+  "source": "Zdroj",
+  "errorTitle": "Verš sa nepodarilo načítať",
+  "qrAlt": "QR kód pre zdrojový verš",
+  "apiFailed": "API zlyhalo so stavom {status}"
+}

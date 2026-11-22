@@ -1,0 +1,8 @@
+{
+  "loading": "Cargando...",
+  "updated": "Actualizado",
+  "from": "desde",
+  "errorTitle": "XKCD no se pudo cargar",
+  "apiFailed": "La API falló con {status}",
+  "title": "XKCD"
+}

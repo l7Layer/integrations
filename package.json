@@ -1,0 +1,23 @@
+{
+  "name": "paperlesspaper-openintegrations",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "screenshots": "node scripts/render-screenshots.mjs",
+    "copy:assets": "node scripts/copy-openintegration-assets.mjs",
+    "postinstall": "npm run copy:assets",
+    "docker:build": "docker build -t paperlesspaper-openintegrations:latest .",
+    "docker:run": "docker run --rm -p 3000:3000 paperlesspaper-openintegrations:latest",
+    "check:of-the-day": "node scripts/check-of-the-day-layouts.mjs",
+    "check:dashboards": "node scripts/check-dashboard-integrations.mjs"
+  },
+  "dependencies": {
+    "@fontsource/open-sans": "5.2.7",
+    "@paperlesspaper/openintegration": "git+https://github.com/l7Layer/openintegration.git#f9e199e659ac75f5bb3602718704cd5d953e17e9",
+    "express": "^4.19.2",
+    "fast-xml-parser": "^5.11.1",
+    "suncalc": "^2.0.2"
+  }
+}

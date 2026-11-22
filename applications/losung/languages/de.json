@@ -1,0 +1,12 @@
+{
+  "loading": "Wird geladen...",
+  "kicker": "Herrnhuter Losungen",
+  "title": "Losung",
+  "losung": "Losung",
+  "lehrtext": "Lehrtext",
+  "source": "losungen.de",
+  "updated": "Aktualisiert",
+  "empty": "Kein Text ausgewählt.",
+  "errorTitle": "Losung konnte nicht geladen werden",
+  "apiFailed": "API-Aufruf fehlgeschlagen ({status})"
+}

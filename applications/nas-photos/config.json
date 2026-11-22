@@ -1,0 +1,17 @@
+{
+  "name": "NAS Photos",
+  "version": "0.1.0",
+  "description": "Displays the latest photo pushed from a private NAS.",
+  "renderPage": "./render.html",
+  "settingsPage": "./settings.html",
+  "requiredPermissions": [
+    "paper:content:write",
+    "paper:delivery:read"
+  ],
+  "capabilities": {
+    "contentPush": {
+      "callbackPath": "/api/paper-status"
+    }
+  },
+  "language": ["en", "de"]
+}

@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="paperless:epd-optimize" content='{"intent":"readable"}'>
+    <title>Google Sheet Table</title>
+    <link rel="stylesheet" href="/assets/paperless.css">
+    <script src="/assets/paperless.iife.js"></script>
+    <style>
+      .sheet-screen {
+        padding: 22px;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+        gap: 16px;
+      }
+
+      .sheet-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+        gap: 16px;
+      }
+
+      .sheet-meta,
+      .sheet-empty-title,
+      .sheet-empty-copy {
+        margin: 0;
+      }
+
+      .sheet-meta {
+        color: var(--pp-muted);
+        font-size: 0.82rem;
+        font-weight: 900;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      .sheet-title {
+        margin: 5px 0 0;
+        font-size: clamp(2.2rem, 8.5vh, 5rem);
+        font-weight: 950;
+        line-height: 0.9;
+        letter-spacing: 0;
+      }
+
+      .sheet-meta {
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .sheet-table-wrap {
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
+        border: 3px solid var(--pp-border);
+      }
+
+      .sheet-table {
+        width: 100%;
+        height: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+
+      .sheet-table-schedule col:nth-child(1) {
+        width: 24%;
+      }
+
+      .sheet-table-schedule col:nth-child(2) {
+        width: 32%;
+      }
+
+      .sheet-table-schedule col:nth-child(3) {
+        width: 44%;
+      }
+
+      .sheet-table th {
+        background: var(--pp-fg);
+        color: var(--pp-bg);
+        font-size: clamp(0.9rem, 2.4vh, 1.2rem);
+        line-height: 1;
+        padding: 10px 12px;
+        text-align: left;
+        text-transform: uppercase;
+      }
+
+      .sheet-screen.sheet-header-plain .sheet-table th {
+        background: var(--pp-bg);
+        color: var(--pp-fg);
+      }
+
+      .sheet-table td {
+        border-top: 3px solid var(--pp-border);
+        font-size: clamp(1.05rem, 4vh, 2.15rem);
+        font-weight: 850;
+        line-height: 1.05;
+        padding: 10px 12px;
+        vertical-align: middle;
+        overflow-wrap: anywhere;
+      }
+
+      .sheet-date {
+        color: var(--pp-accent);
+        font-weight: 950;
+      }
+
+      .sheet-group {
+        color: var(--pp-muted);
+      }
+
+      .sheet-empty {
+        min-height: 0;
+        border: 3px solid var(--pp-border);
+        display: grid;
+        place-items: center;
+        text-align: center;
+        padding: 24px;
+      }
+
+      .sheet-empty-inner {
+        max-width: 34rem;
+      }
+
+      .sheet-empty-title {
+        font-size: clamp(2rem, 7vh, 4.6rem);
+        font-weight: 950;
+        line-height: 0.95;
+      }
+
+      .sheet-empty-copy {
+        margin-top: 12px;
+        color: var(--pp-muted);
+        font-size: clamp(1rem, 3vh, 1.45rem);
+        font-weight: 800;
+        line-height: 1.2;
+      }
+
+      @media (orientation: portrait) {
+        .sheet-screen {
+          padding: 18px;
+          gap: 14px;
+        }
+
+        .sheet-header {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .sheet-meta {
+          text-align: left;
+        }
+
+        .sheet-table-schedule col:nth-child(1) {
+          width: 27%;
+        }
+
+        .sheet-table-schedule col:nth-child(2) {
+          width: 29%;
+        }
+
+        .sheet-table-schedule col:nth-child(3) {
+          width: 44%;
+        }
+
+        .sheet-table td {
+          padding: 9px 10px;
+        }
+
+      }
+
+      @media (max-height: 520px) {
+        .sheet-screen {
+          padding: 16px 18px;
+          gap: 10px;
+        }
+
+        .sheet-table th {
+          padding: 8px 10px;
+        }
+
+        .sheet-table td {
+          padding: 7px 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="website-has-loading-element"></div>
+    <main class="pp-screen sheet-screen" id="app">
+      <header class="sheet-header">
+        <div>
+          <h1 class="sheet-title pp-fit-title" id="sheet-title">Sheet</h1>
+        </div>
+        <p class="sheet-meta" id="sheet-meta" data-i18n="loading">Loading...</p>
+      </header>
+      <section class="sheet-empty" id="sheet-content">
+        <div class="sheet-empty-inner">
+          <p class="sheet-empty-title" data-i18n="loading">Loading...</p>
+        </div>
+      </section>
+    </main>
+    <script>
+      (async function render() {
+        const {
+          waitForPayload,
+          getSettings,
+          getQuerySettings,
+          mergeSettings,
+          loadLanguageJson,
+          applyColorTheme,
+          escapeHtml,
+          fitAllText,
+          fitToScreen,
+          markLoading,
+          markReady,
+          markError,
+        } = window.PaperlessOpenIntegration;
+
+        const defaultMessages = {
+          loading: "Loading...",
+          defaultTitle: "Sheet",
+          date: "Date",
+          name: "Name",
+          group: "Group",
+          configuredNeededTitle: "Add a Sheet ID",
+          configuredNeededCopy: "Paste a public Google Sheet ID or URL in the integration settings.",
+          emptyTitle: "No rows found",
+          emptyCopy: "The sheet loaded, but no displayable rows were found.",
+          updated: "Updated",
+          errorTitle: "Sheet could not load",
+          apiFailed: "API failed with {status}",
+        };
+        let messages = defaultMessages;
+
+        function t(key, values = {}) {
+          const template =
+            typeof messages[key] === "string"
+              ? messages[key]
+              : defaultMessages[key] || key;
+          return template.replace(/\{(\w+)\}/g, (_match, name) => values[name] ?? "");
+        }
+
+        function applyStaticMessages(root = document) {
+          root.querySelectorAll("[data-i18n]").forEach((element) => {
+            element.textContent = t(element.dataset.i18n);
+          });
+        }
+
+        async function loadMessages(payload) {
+          if (typeof loadLanguageJson !== "function") {
+            return { language: "en", messages: defaultMessages };
+          }
+
+          const result = await loadLanguageJson(payload);
+          messages = { ...defaultMessages, ...result.messages };
+          document.documentElement.lang = result.language || "en";
+          applyStaticMessages();
+          return result;
+        }
+
+        function formatDateTime(value, language) {
+          const date = new Date(value);
+          if (Number.isNaN(date.getTime())) {
+            return "";
+          }
+
+          return new Intl.DateTimeFormat(language || "en", {
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          }).format(date);
+        }
+
+        function hasSheetId(value) {
+          return typeof value === "string" && value.trim().length > 0;
+        }
+
+        function displayTitle(settings, data) {
+          return String(settings.title || data?.sheetTitle || t("defaultTitle")).trim() || t("defaultTitle");
+        }
+
+        function renderEmpty(title, copy) {
+          document.getElementById("sheet-content").className = "sheet-empty";
+          document.getElementById("sheet-content").innerHTML = `
+            <div class="sheet-empty-inner">
+              <p class="sheet-empty-title pp-fit-title">${escapeHtml(title)}</p>
+              <p class="sheet-empty-copy">${escapeHtml(copy)}</p>
+            </div>
+          `;
+        }
+
+        function renderScheduleTable(entries) {
+          const rows = entries
+            .map((entry) => `
+              <tr>
+                <td class="sheet-date">${escapeHtml(entry.date || "")}</td>
+                <td>${escapeHtml(entry.name || "")}</td>
+                <td class="sheet-group">${escapeHtml(entry.group || "")}</td>
+              </tr>
+            `)
+            .join("");
+
+          document.getElementById("sheet-content").className = "sheet-table-wrap";
+          document.getElementById("sheet-content").innerHTML = `
+            <table class="sheet-table sheet-table-schedule">
+              <colgroup><col><col><col></colgroup>
+              <thead>
+                <tr>
+                  <th>${escapeHtml(t("date"))}</th>
+                  <th>${escapeHtml(t("name"))}</th>
+                  <th>${escapeHtml(t("group"))}</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          `;
+        }
+
+        function cellValue(cell) {
+          if (cell && typeof cell === "object") {
+            return cell.value || "";
+          }
+          return cell || "";
+        }
+
+        function readableTextColor(backgroundColor) {
+          const hex = typeof backgroundColor === "string"
+            ? backgroundColor.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)
+            : null;
+          if (!hex) {
+            return "";
+          }
+
+          const value = hex[1].length === 3
+            ? hex[1].split("").map((char) => char + char).join("")
+            : hex[1];
+          const red = parseInt(value.slice(0, 2), 16);
+          const green = parseInt(value.slice(2, 4), 16);
+          const blue = parseInt(value.slice(4, 6), 16);
+          const luminance = (red * 0.299 + green * 0.587 + blue * 0.114) / 255;
+          return luminance > 0.58 ? "#000000" : "#ffffff";
+        }
+
+        function tableHeaderStyle(settings) {
+          if (["contrast", "plain", "sheet"].includes(settings.tableHeaderStyle)) {
+            return settings.tableHeaderStyle;
+          }
+
+          return settings.contrastHeader === false ? "plain" : "contrast";
+        }
+
+        function headerFormat(format, settings) {
+          if (tableHeaderStyle(settings) === "sheet") {
+            return format;
+          }
+
+          return {
+            ...format,
+            backgroundColor: "",
+            color: "",
+          };
+        }
+
+        function styleDeclarations(format = {}, settings = {}) {
+          if (!format || typeof format !== "object") {
+            return "";
+          }
+
+          const declarations = [];
+          if (settings.preserveTextStyles !== false && format.bold) {
+            declarations.push("font-weight: 950");
+          }
+          if (settings.preserveTextStyles !== false && format.italic) {
+            declarations.push("font-style: italic");
+          }
+          if (settings.preserveTextStyles !== false && (format.underline || format.strikethrough)) {
+            declarations.push(
+              `text-decoration: ${[
+                format.underline ? "underline" : "",
+                format.strikethrough ? "line-through" : "",
+              ].filter(Boolean).join(" ")}`,
+            );
+          }
+          if (settings.preserveAlignment !== false && format.align && ["left", "center", "right"].includes(format.align)) {
+            declarations.push(`text-align: ${format.align}`);
+          }
+          if (settings.preserveBackgroundColors !== false && format.backgroundColor) {
+            declarations.push(`background-color: ${format.backgroundColor}`);
+          }
+          if (settings.preserveTextColors !== false && format.color) {
+            declarations.push(`color: ${format.color}`);
+          } else if (settings.preserveBackgroundColors !== false && format.backgroundColor) {
+            const color = readableTextColor(format.backgroundColor);
+            if (color) {
+              declarations.push(`color: ${color}`);
+            }
+          }
+
+          return declarations.length ? ` style="${escapeHtml(declarations.join("; "))}"` : "";
+        }
+
+        function renderRawTable(table, settings) {
+          const columns = Array.isArray(table?.columns) ? table.columns : [];
+          const rows = Array.isArray(table?.rows) ? table.rows : [];
+          const widthTotal = columns.reduce((total, column) => {
+            const width = Number(column?.width);
+            return total + (Number.isFinite(width) && width > 0 ? width : 0);
+          }, 0);
+          const colgroup = columns
+            .map((column) => {
+              const width = Number(column?.width);
+              const percent = widthTotal && Number.isFinite(width) && width > 0
+                ? Math.max(1, (width / widthTotal) * 100)
+                : 0;
+              return percent
+                ? `<col style="width: ${percent.toFixed(2)}%">`
+                : "<col>";
+            })
+            .join("");
+          const header = columns
+            .map((column) =>
+              `<th${styleDeclarations(headerFormat(column?.format, settings), settings)}>${escapeHtml(cellValue(column))}</th>`,
+            )
+            .join("");
+          const body = rows
+            .map((row) => `
+              <tr>
+                ${columns
+                  .map((_column, index) => {
+                    const cell = row?.[index];
+                    return `<td${styleDeclarations(cell?.format, settings)}>${escapeHtml(cellValue(cell))}</td>`;
+                  })
+                  .join("")}
+              </tr>
+            `)
+            .join("");
+
+          document.getElementById("sheet-content").className = "sheet-table-wrap";
+          document.getElementById("sheet-content").innerHTML = `
+            <table class="sheet-table">
+              <colgroup>${colgroup}</colgroup>
+              <thead><tr>${header}</tr></thead>
+              <tbody>${body}</tbody>
+            </table>
+          `;
+        }
+
+        function paramsFor(settings, language) {
+          const params = new URLSearchParams();
+          for (const key of [
+            "sheetId",
+            "gid",
+            "namesText",
+            "displayNamesText",
+            "columnsText",
+            "dateColumn",
+            "maxEntries",
+            "showPastDates",
+            "includeSectionHeaders",
+            "maxSectionHeaders",
+            "tableHeaderStyle",
+            "contrastHeader",
+            "preserveTextStyles",
+            "preserveTextColors",
+            "preserveBackgroundColors",
+            "preserveAlignment",
+          ]) {
+            params.set(key, settings[key] ?? "");
+          }
+          params.set("language", language || "en");
+          return params;
+        }
+
+        const defaults = {
+          color: "light",
+          title: "",
+          sheetId: "",
+          gid: "",
+          namesText: "",
+          displayNamesText: "",
+          columnsText: "",
+          dateColumn: "A",
+          maxEntries: 20,
+          showPastDates: false,
+          includeSectionHeaders: true,
+          maxSectionHeaders: 2,
+          tableHeaderStyle: "contrast",
+          contrastHeader: true,
+          preserveTextStyles: true,
+          preserveTextColors: true,
+          preserveBackgroundColors: true,
+          preserveAlignment: true,
+          showUpdatedAt: true,
+        };
+
+        async function renderPayload(payload) {
+          try {
+            markLoading?.();
+            const languageResult = await loadMessages(payload);
+            const settings = mergeSettings(defaults, getSettings(payload), getQuerySettings());
+            applyColorTheme(settings.color, { defaultTheme: defaults.color });
+            const app = document.getElementById("app");
+            app.classList.toggle("sheet-contrast-header", tableHeaderStyle(settings) === "contrast");
+            app.classList.toggle("sheet-header-plain", tableHeaderStyle(settings) === "plain");
+            app.classList.toggle("sheet-header-sheet", tableHeaderStyle(settings) === "sheet");
+
+            document.getElementById("sheet-title").textContent =
+              String(settings.title || t("defaultTitle")).trim() || t("defaultTitle");
+
+            if (!hasSheetId(settings.sheetId)) {
+              document.getElementById("sheet-meta").textContent = t("configuredNeededTitle");
+              renderEmpty(t("configuredNeededTitle"), t("configuredNeededCopy"));
+              fitAllText(".pp-fit-title", { min: 24, max: 78, step: 2 });
+              fitToScreen(document.getElementById("app"));
+              markReady({ configured: false });
+              return;
+            }
+
+            const response = await fetch(`./api/data?${paramsFor(settings, languageResult.language).toString()}`, {
+              cache: "no-store",
+            });
+
+            if (!response.ok) {
+              throw new Error(t("apiFailed", { status: response.status }));
+            }
+
+            const data = await response.json();
+            const tableRows = Array.isArray(data.table?.rows) ? data.table.rows : [];
+            const entries = Array.isArray(data.entries) ? data.entries : [];
+
+            if (tableRows.length) {
+              renderRawTable(data.table, settings);
+            } else if (entries.length) {
+              renderScheduleTable(entries);
+            } else {
+              renderEmpty(t("emptyTitle"), t("emptyCopy"));
+            }
+
+            document.getElementById("sheet-title").textContent = displayTitle(settings, data);
+            document.getElementById("sheet-meta").textContent =
+              settings.showUpdatedAt && data.updatedAt
+                ? `${t("updated")} ${formatDateTime(data.updatedAt, languageResult.language)}`
+                : "";
+
+            fitAllText(".pp-fit-title", { min: 24, max: 78, step: 2 });
+            fitToScreen(document.getElementById("app"));
+            markReady({ rows: tableRows.length, entries: entries.length });
+          } catch (error) {
+            markError(error);
+            document.body.innerHTML = `<main class="pp-screen sheet-screen"><section class="sheet-empty"><div class="sheet-empty-inner"><p class="sheet-empty-title">${escapeHtml(t("errorTitle"))}</p><p class="sheet-empty-copy">${escapeHtml(error.message)}</p></div></section></main>`;
+          }
+        }
+
+        const payload = await waitForPayload({ timeoutMs: 500, timeout: 500, onUpdate: renderPayload });
+        await renderPayload(payload);
+      })();
+    </script>
+  </body>
+</html>

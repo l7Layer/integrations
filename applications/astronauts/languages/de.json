@@ -1,0 +1,16 @@
+{
+  "loading": "Wird geladen...",
+  "updated": "Aktualisiert",
+  "from": "von",
+  "errorTitle": "Astronauten konnten nicht geladen werden",
+  "apiFailed": "API-Aufruf fehlgeschlagen ({status})",
+  "peopleInSpace": "Menschen im All",
+  "loadingRoster": "Crew wird geladen",
+  "crewRoster": "Crewliste",
+  "empty": "Keine Crew passt zu diesem Standortfilter.",
+  "countAll": "Menschen, die gerade nicht auf der Erde sind",
+  "countMatched": "{count} von {total} gefunden",
+  "filtered": "Gefiltert: {value}",
+  "missionDays": "{count} Missionstage",
+  "launched": "Gestartet am {date}"
+}

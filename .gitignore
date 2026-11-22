@@ -1,0 +1,22 @@
+.env
+node_modules
+npm-debug.log
+.DS_Store
+*.code-workspace
+output
+# applications/*/screenshots
+public/runner.css
+public/fonts/
+vendor/openintegration/dist/fonts/
+.playwright-cli/*
+applications/constellations-in-the-sky/assets/virtualsky/
+
+# Local development data and machine-specific files
+.env.*
+!.env.example
+.venv/
+*.ses
+*.plist
+photo_index.json
+photo_history_upload.json
+openpaper-photo-service/

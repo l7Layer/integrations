@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="paperless:epd-optimize"
+      content='{"palette":"aitjcizeSpectra6Palette","imageAdjustmentOptions":{"toneMapping":{"exposure":0.04,"saturation":0.05,"contrast":0.03,"strength":0.35,"shadowBoost":0.05,"highlightCompress":0.08,"midpoint":0.5},"clarity":{"amount":0.9,"radius":2,"midtone":1.1},"dynamicRangeCompression":{"mode":"display","strength":0.55,"lowPercentile":0.01,"highPercentile":0.99}},"canvasDitherOptions":{"serpentine":true,"errorDiffusionMatrix":"sierra3"}}'
+    />
+    <title>Tree of the Day</title>
+    <link rel="stylesheet" href="/assets/paperless.css" />
+    <script src="/assets/paperless.iife.js"></script>
+    <script src="./data/trees.js"></script>
+  </head>
+  <body>
+    <div id="website-has-loading-element"></div>
+    <main id="app" class="tree-screen"></main>
+
+    <script>
+      (async function render() {
+        const {
+          waitForPayload,
+          getSettings,
+          getQuerySettings,
+          mergeSettings,
+          escapeHtml,
+          fitOfTheDayLayout,
+          markLoading,
+          markReady,
+          markError,
+          loadLanguageJson,
+          applyColorTheme,
+          renderOfTheDayLayout,
+          waitForOfTheDayImage,
+        } = window.PaperlessOpenIntegration;
+
+        const trees = Array.isArray(window.TreeOfTheDayTrees)
+          ? window.TreeOfTheDayTrees
+          : [];
+
+        const defaultMessages = {
+          loading: "Loading...",
+          factsShown: "{shown} of {total} facts",
+          kicker: "Tree of the day",
+          species: "Species",
+          range: "Range",
+          height: "Height",
+          age: "Age",
+          leafType: "Leaf type",
+          fruitSeed: "Fruit / seed",
+          culturalRole: "Cultural role",
+          family: "Family",
+          habitat: "Habitat",
+          conservation: "Conservation",
+          category: "Entry",
+          categorySpecies: "Species",
+          categoryIndividual: "Famous tree",
+          source: "Source",
+          selectedFrom: "{count} in rotation",
+          errorTitle: "Tree could not load",
+          imageFailed: "Tree image could not load.",
+          listFailed: "Tree list could not load.",
+        };
+        let messages = defaultMessages;
+        let currentLanguage = "en";
+
+        function t(key, values = {}) {
+          const template =
+            typeof messages[key] === "string"
+              ? messages[key]
+              : defaultMessages[key] || key;
+          return template.replace(
+            /\{(\w+)\}/g,
+            (_match, name) => values[name] ?? "",
+          );
+        }
+
+        async function loadMessages(payload) {
+          let result;
+          if (typeof loadLanguageJson === "function") {
+            result = await loadLanguageJson(payload);
+          } else {
+            const requested = String(payload?.meta?.language || "en").trim();
+            const requestedBase = requested.split("-")[0].toLowerCase();
+            const supported = ["en", "de"];
+            const language = supported.includes(requested)
+              ? requested
+              : supported.includes(requestedBase)
+                ? requestedBase
+                : "en";
+            const response = await fetch(`./languages/${language}.json`, {
+              cache: "no-store",
+            });
+            if (!response.ok) {
+              throw new Error(
+                `Could not load language JSON for ${language}: ${response.status}`,
+              );
+            }
+            result = { language, messages: await response.json() };
+          }
+
+          messages = { ...defaultMessages, ...result.messages };
+          currentLanguage = result.language || "en";
+          document.documentElement.lang = currentLanguage;
+        }
+
+        async function loadTreeTranslations(language) {
+          const requested = String(language || "en")
+            .trim()
+            .toLowerCase();
+          const requestedBase = requested.split("-")[0];
+          const candidates = ["en", requestedBase, requested].filter(
+            (value, index, array) => value && array.indexOf(value) === index,
+          );
+          let translations = {};
+
+          for (const candidate of candidates) {
+            try {
+              const response = await fetch(
+                `./languages/trees/${candidate}.json`,
+                { cache: "no-store" },
+              );
+              if (!response.ok) {
+                continue;
+              }
+              const data = await response.json();
+              if (data && typeof data === "object" && !Array.isArray(data)) {
+                translations = { ...translations, ...data };
+              }
+            } catch (_error) {
+              // Item translations are optional; base data remains usable.
+            }
+          }
+
+          return translations;
+        }
+
+        function applyTreeTranslation(tree, translations) {
+          const translation =
+            translations && typeof translations === "object"
+              ? translations[tree.id]
+              : null;
+          if (
+            !translation ||
+            typeof translation !== "object" ||
+            Array.isArray(translation)
+          ) {
+            return tree;
+          }
+
+          const fields = [
+            "name",
+            "nickname",
+            "species",
+            "family",
+            "nativeRange",
+            "height",
+            "age",
+            "leafType",
+            "fruitSeed",
+            "habitat",
+            "conservation",
+            "culturalRole",
+            "signature",
+            "source",
+          ];
+          const translatedFields = {};
+          fields.forEach((field) => {
+            if (typeof translation[field] === "string") {
+              translatedFields[field] = translation[field];
+            }
+          });
+          return { ...tree, ...translatedFields };
+        }
+
+        function dayKey(date = new Date()) {
+          return date.toISOString().slice(0, 10);
+        }
+
+        function hashString(value) {
+          let hash = 2166136261;
+          for (let index = 0; index < value.length; index += 1) {
+            hash ^= value.charCodeAt(index);
+            hash = Math.imul(hash, 16777619);
+          }
+          return hash >>> 0;
+        }
+
+        function pickTree(settings, key) {
+          const pinned = String(settings.treeId || "")
+            .trim()
+            .toLowerCase();
+          if (pinned) {
+            const match = trees.find((tree) => tree.id === pinned);
+            if (match) {
+              return { tree: match, poolSize: 1 };
+            }
+          }
+
+          const region = String(settings.region || "any");
+          const category = String(settings.category || "any");
+          const pool = trees.filter((tree) => {
+            const regionMatch = region === "any" || tree.region === region;
+            const categoryMatch =
+              category === "any" || tree.category === category;
+            return regionMatch && categoryMatch;
+          });
+          const fallbackPool = pool.length ? pool : trees;
+          const seed = String(settings.seed || "");
+          const index =
+            hashString(`${key}|${seed}|${region}|${category}`) %
+            fallbackPool.length;
+          return { tree: fallbackPool[index], poolSize: fallbackPool.length };
+        }
+
+        function formatDate(value) {
+          const date = new Date(`${value}T00:00:00Z`);
+          return date.toLocaleDateString(currentLanguage || undefined, {
+            day: "2-digit",
+            month: "short",
+            timeZone: "UTC",
+          });
+        }
+
+        function categoryLabel(value) {
+          return value === "individual"
+            ? t("categoryIndividual")
+            : t("categorySpecies");
+        }
+
+        async function renderPayload(payload) {
+          try {
+            markLoading();
+            const defaults = {
+              color: "light",
+              region: "any",
+              category: "any",
+              treeId: "",
+              seed: "",
+              textSize: "middle",
+              showHeader: true,
+              showFactCount: false,
+              showRotationCount: false,
+              showSpecies: true,
+              showRange: true,
+              showHeight: true,
+              showAge: true,
+              showLeafType: true,
+              showFruitSeed: true,
+              showCulturalRole: true,
+              showFamily: false,
+              showHabitat: false,
+              showConservation: false,
+              showCategory: false,
+            };
+            await loadMessages(payload);
+            const settings = mergeSettings(
+              defaults,
+              getSettings(payload),
+              getQuerySettings(),
+            );
+            if (typeof applyColorTheme === "function") {
+              applyColorTheme(settings.color, { defaultTheme: defaults.color });
+            }
+            if (!trees.length) {
+              throw new Error(t("listFailed"));
+            }
+
+            const today = dayKey();
+            const { tree: selectedTree, poolSize } = pickTree(settings, today);
+            const treeTranslations = await loadTreeTranslations(currentLanguage);
+            const tree = applyTreeTranslation(selectedTree, treeTranslations);
+            const facts = [
+              {
+                visible: settings.showSpecies !== false,
+                label: t("species"),
+                value: tree.species,
+              },
+              {
+                visible: settings.showRange !== false,
+                label: t("range"),
+                value: tree.nativeRange,
+              },
+              {
+                visible: settings.showHeight !== false,
+                label: t("height"),
+                value: tree.height,
+              },
+              {
+                visible: settings.showAge !== false,
+                label: t("age"),
+                value: tree.age,
+              },
+              {
+                visible: settings.showLeafType !== false,
+                label: t("leafType"),
+                value: tree.leafType,
+              },
+              {
+                visible: settings.showFruitSeed !== false,
+                label: t("fruitSeed"),
+                value: tree.fruitSeed,
+              },
+              {
+                visible: settings.showCulturalRole !== false,
+                label: t("culturalRole"),
+                value: tree.culturalRole,
+              },
+              {
+                visible: settings.showFamily !== false,
+                label: t("family"),
+                value: tree.family,
+              },
+              {
+                visible: settings.showHabitat !== false,
+                label: t("habitat"),
+                value: tree.habitat,
+              },
+              {
+                visible: settings.showConservation !== false,
+                label: t("conservation"),
+                value: tree.conservation,
+              },
+              {
+                visible: settings.showCategory !== false,
+                label: t("category"),
+                value: categoryLabel(tree.category),
+              },
+            ];
+
+            const layout = renderOfTheDayLayout({
+              target: "#app",
+              className: "tree-screen",
+              layout: "auto",
+              factsShown: t("factsShown", { shown: "{shown}", total: "{total}" }),
+              textSize: settings.textSize,
+              showHeader: settings.showHeader !== false,
+              showFactCount: settings.showFactCount === true,
+              kicker: t("kicker"),
+              title: tree.name,
+              signature: tree.signature,
+              subtitle: tree.nickname,
+              image: {
+                src: tree.image,
+                alt: tree.name,
+                blendMode: "multiply",
+              },
+              meta: [
+                {
+                  key: "date",
+                  className: "pp-otd-date",
+                  value: formatDate(today),
+                },
+                {
+                  key: "source",
+                  label: t("source"),
+                  value: tree.source,
+                },
+                { key: "rotation", value: t("selectedFrom", { count: poolSize }), visible: settings.showRotationCount === true },
+              ],
+              facts,
+            });
+
+            try {
+              await Promise.all([
+                document.fonts?.ready,
+                waitForOfTheDayImage(layout),
+              ]);
+            } catch (_error) {
+              throw new Error(t("imageFailed"));
+            }
+
+            fitOfTheDayLayout(layout, { textSize: settings.textSize });
+            markReady({ tree: tree.id, day: today });
+          } catch (error) {
+            markError(error);
+            document.body.innerHTML = `<main class="pp-screen"><h1 class="pp-title pp-error">${escapeHtml(t("errorTitle"))}</h1><p>${escapeHtml(error.message)}</p></main>`;
+          }
+        }
+
+        const payload = await waitForPayload({
+          timeoutMs: 500,
+          onUpdate: renderPayload,
+        });
+        await renderPayload(payload);
+      })();
+    </script>
+  </body>
+</html>

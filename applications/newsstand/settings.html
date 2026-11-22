@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Newsstand Settings</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f7f7f4;
+        --fg: #111;
+        --muted: #5f6360;
+        --line: #222;
+        --field: #fff;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+      }
+
+      main {
+        display: grid;
+        gap: 12px;
+        padding: 14px;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        font-size: 0.78rem;
+        font-weight: 760;
+        text-transform: uppercase;
+      }
+
+      select,
+      input {
+        width: 100%;
+        border: 2px solid var(--line);
+        border-radius: 4px;
+        background: var(--field);
+        color: var(--fg);
+        font: inherit;
+        font-size: 0.95rem;
+        font-weight: 560;
+        line-height: 1.25;
+      }
+
+      select {
+        min-height: 42px;
+        padding: 8px 10px;
+      }
+
+      input {
+        min-height: 36px;
+        padding: 7px 9px;
+      }
+
+      .meta,
+      .status {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.82rem;
+        line-height: 1.35;
+      }
+
+      .status {
+        min-height: 1.35em;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #111;
+          --fg: #f5f5f0;
+          --muted: #b5b9b4;
+          --line: #f5f5f0;
+          --field: #050505;
+        }
+      }
+    </style>
+    <link rel="stylesheet" href="/assets/settings.css" />
+    <script src="/assets/paperless.iife.js"></script>
+  </head>
+  <body>
+    <main>
+      <label>
+        Newspaper
+        <select id="newspaper">
+          <option value="top3">Random top 3</option>
+          <option value="random">Random</option>
+        </select>
+      </label>
+      <label>
+        Filter
+        <input id="filter" type="search" autocomplete="off" />
+      </label>
+      <p class="meta" id="selected">top3</p>
+      <p class="status" id="status">Loading newspapers...</p>
+    </main>
+
+    <script>
+      const defaults = {
+        newspaper: "top3",
+        fit: "cover",
+        showTitleBar: true,
+      };
+      const specialOptions = [
+        {
+          slug: "top3",
+          name: "Random top 3",
+          city: "The New York Times, The Wall Street Journal, or The Guardian",
+          country: "",
+        },
+        {
+          slug: "random",
+          name: "Random",
+          city: "Any available front page",
+          country: "",
+        },
+      ];
+
+      let settings = { ...defaults };
+      let papers = [];
+
+      const newspaper = document.getElementById("newspaper");
+      const filter = document.getElementById("filter");
+      const selected = document.getElementById("selected");
+      const status = document.getElementById("status");
+      const settingsBridge = window.PaperlessOpenIntegration || {};
+      let currentLanguage = "en";
+      const germanText = new Map([
+        ["Newsstand Settings", "Zeitungskiosk-Einstellungen"],
+        ["Newspaper", "Zeitung"],
+        ["Random top 3", "Zufällige Top 3"],
+        ["Random", "Zufällig"],
+        ["The New York Times, The Wall Street Journal, or The Guardian", "The New York Times, The Wall Street Journal oder The Guardian"],
+        ["Any available front page", "Beliebige verfügbare Titelseite"],
+        ["Filter", "Filter"],
+        ["Loading newspapers...", "Zeitungen werden geladen..."],
+        ["Current selection", "Aktuelle Auswahl"],
+        ["Newspapers could not load", "Zeitungen konnten nicht geladen werden"],
+      ]);
+
+      function languageFromPayload(payload) {
+        return String(payload?.meta?.language || navigator.language || "en")
+          .split("-")[0]
+          .toLowerCase();
+      }
+
+      function tr(text) {
+        return currentLanguage === "de" ? germanText.get(text) || text : text;
+      }
+
+      function paperListFailed(statusCode) {
+        return currentLanguage === "de"
+          ? `Zeitungsliste fehlgeschlagen mit ${statusCode}`
+          : `Paper list failed with ${statusCode}`;
+      }
+
+      function newspapersLoaded(count) {
+        return currentLanguage === "de"
+          ? `${count} Zeitungen geladen`
+          : `${count} newspapers loaded`;
+      }
+
+      function translateStaticText(root = document.body) {
+        if (currentLanguage !== "de") {
+          return;
+        }
+        document.title = tr(document.title);
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) {
+          const text = node.nodeValue.trim();
+          const translated = text ? germanText.get(text) : "";
+          if (translated) {
+            node.nodeValue = node.nodeValue.replace(text, translated);
+          }
+        }
+        document.querySelectorAll("option").forEach((option) => {
+          option.textContent = tr(option.textContent.trim());
+        });
+      }
+
+      function setSettingsLanguage(payload) {
+        currentLanguage = languageFromPayload(payload);
+        document.documentElement.lang = currentLanguage;
+        translateStaticText();
+      }
+
+      function isObject(value) {
+        return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+      }
+
+      function escapeText(value) {
+        return String(value || "").replace(/[&<>"']/g, (char) => {
+          switch (char) {
+            case "&":
+              return "&amp;";
+            case "<":
+              return "&lt;";
+            case ">":
+              return "&gt;";
+            case '"':
+              return "&quot;";
+            default:
+              return "&#039;";
+          }
+        });
+      }
+
+      function optionLabel(paper) {
+        const prefix = paper.country ? `${paper.country.toUpperCase()} - ` : "";
+        const suffix = paper.city ? ` (${tr(paper.city)})` : "";
+        return `${prefix}${tr(paper.name)}${suffix}`;
+      }
+
+      function pluginSettingsFromPayload(payload) {
+        const meta = isObject(payload?.meta) ? payload.meta : {};
+        return isObject(meta.pluginSettings) ? meta.pluginSettings : {};
+      }
+
+      function applySettings(nextSettings) {
+        settings = {
+          ...settings,
+          ...nextSettings,
+        };
+        delete settings.orientation;
+
+        if (!settings.newspaper) {
+          settings.newspaper = defaults.newspaper;
+        }
+
+        renderOptions();
+      }
+
+      function renderOptions() {
+        const needle = filter.value.trim().toLowerCase();
+        const options = [...specialOptions, ...papers].filter((paper) => {
+          if (!needle || paper.slug === settings.newspaper) {
+            return true;
+          }
+
+          return [paper.slug, paper.name, paper.city, paper.country]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase()
+            .includes(needle);
+        });
+
+        if (
+          settings.newspaper &&
+          !options.some((paper) => paper.slug === settings.newspaper)
+        ) {
+          options.unshift({
+            slug: settings.newspaper,
+            name: settings.newspaper,
+            city: tr("Current selection"),
+            country: "",
+          });
+        }
+
+        newspaper.innerHTML = options
+          .map(
+            (paper) =>
+              `<option value="${escapeText(paper.slug)}">${escapeText(optionLabel(paper))}</option>`,
+          )
+          .join("");
+        newspaper.value = settings.newspaper || defaults.newspaper;
+        selected.textContent = newspaper.value;
+      }
+
+      function postSettings() {
+        settings = {
+          ...settings,
+          newspaper: newspaper.value,
+        };
+        selected.textContent = settings.newspaper;
+
+        if (settingsBridge.postSettingsUpdate) {
+          settingsBridge.postSettingsUpdate(settings);
+        } else {
+          window.parent.postMessage(
+            {
+              type: "paperlesspaper:settings:update",
+              pluginSettings: settings,
+            },
+            "*",
+          );
+        }
+      }
+
+      function handleMessage(event) {
+        const message = event.data;
+        if (!isObject(message)) {
+          return;
+        }
+
+        const payload =
+          message.type === "INIT" || message.cmd === "message"
+            ? message.data
+            : message.payload;
+
+        if (isObject(payload)) {
+          setSettingsLanguage(payload);
+          applySettings(pluginSettingsFromPayload(payload));
+        } else if (isObject(message.pluginSettings)) {
+          applySettings(message.pluginSettings);
+        }
+      }
+
+      async function loadPapers() {
+        try {
+          const response = await fetch("./api/papers", { cache: "no-store" });
+          if (!response.ok) {
+            throw new Error(paperListFailed(response.status));
+          }
+
+          const data = await response.json();
+          papers = Array.isArray(data.papers) ? data.papers : [];
+          renderOptions();
+          status.textContent = newspapersLoaded(papers.length);
+        } catch (error) {
+          renderOptions();
+          status.textContent = error.message || tr("Newspapers could not load");
+        }
+      }
+
+      window.addEventListener("message", handleMessage);
+      newspaper.addEventListener("change", postSettings);
+      filter.addEventListener("input", renderOptions);
+      settingsBridge.observeSettingsHeight?.({ minHeight: 160 });
+      setSettingsLanguage();
+      if (settingsBridge.postSettingsReady) {
+        settingsBridge.postSettingsReady();
+      } else {
+        window.parent.postMessage({ type: "paperlesspaper:settings:ready" }, "*");
+      }
+      loadPapers();
+      renderOptions();
+    </script>
+  </body>
+</html>

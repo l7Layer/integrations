@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="paperless:epd-optimize" content='{"intent":"natural"}'><title>NAS Photos</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden}
+main{width:100vw;height:100vh;background:#111;display:grid;place-items:center;color:#fff}
+img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}
+#empty{font:600 clamp(1.2rem,3vw,2rem)/1.3 system-ui,sans-serif;text-align:center;padding:2rem;overflow-wrap:anywhere}
+</style></head>
+<body><div id="website-has-loading-element"></div><main id="screen"><div id="empty">Waiting for the first photo from your Mac…</div></main>
+<script>
+(() => {
+ const screen=document.getElementById("screen"),empty=document.getElementById("empty");
+ let context=null,initialized=false;
+ try{if(window.parent!==window&&window.name.startsWith("paperless-slot:"))context=JSON.parse(window.name.slice("paperless-slot:".length));}catch{}
+ const embedded=!!(context&&typeof context.renderId==="string"&&typeof context.regionId==="string"&&typeof context.parentOrigin==="string");
+ function finish(status="ready",error){
+  document.getElementById("website-has-loading-element")?.remove();
+  let marker=document.getElementById("website-has-loaded");
+  if(!marker){marker=document.createElement("div");marker.id="website-has-loaded";marker.hidden=true;document.body.append(marker);}
+  document.documentElement.dataset.paperlessRenderStatus=status;
+  if(embedded)window.parent.postMessage({type:"PAPERLESS_RENDER_STATUS",renderId:context.renderId,regionId:context.regionId,parentOrigin:context.parentOrigin,status,error,processing:document.querySelector('meta[name="paperless:epd-optimize"]')?.content},context.parentOrigin);
+ }
+ function payloadFromMessage(message){
+  if(message?.type==="INIT"&&message.data&&typeof message.data==="object")return message.data;
+  if(message?.type==="INIT"&&message.payload&&typeof message.payload==="object")return message.payload;
+  if(message?.cmd==="message"&&message.data&&typeof message.data==="object")return message.data;
+  return message;
+ }
+ function render(payload){
+  const content=payload?.integrationContent;
+  if(!content||!content.imageUrl){
+   const keys=content&&typeof content==="object"?Object.keys(content).join(", "):"none";
+   empty.textContent="OpenPaper initialized NAS Photos, but no image URL was included in integrationContent. Available content fields: "+keys;
+   finish();return;
+  }
+  const image=new Image();image.alt="Photo from NAS";
+  image.onload=()=>{screen.replaceChildren(image);finish();};
+  image.onerror=()=>{empty.textContent="The photo was included in the payload, but its temporary image URL could not be loaded.";finish("error","Image load failed");};
+  image.src=content.imageUrl;
+ }
+ function accept(event){
+  if(event.source!==window.parent)return;
+  if(embedded&&(event.origin!==context.parentOrigin||event.data?.type!=="INIT"||event.data.renderId!==context.renderId||event.data.regionId!==context.regionId))return;
+  if(!embedded&&event.data?.type!=="INIT"&&event.data?.cmd!=="message")return;
+  initialized=true;render(payloadFromMessage(event.data));
+ }
+ window.addEventListener("message",accept);
+ if(embedded)window.parent.postMessage({type:"PAPERLESS_RENDER_HELLO",renderId:context.renderId,regionId:context.regionId,parentOrigin:context.parentOrigin},context.parentOrigin);
+ setTimeout(()=>{if(!initialized){empty.textContent="No OpenPaper render initialization message was received.";finish("error","INIT message timeout");}},10000);
+})();
+</script></body></html>

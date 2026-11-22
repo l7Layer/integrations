@@ -1,0 +1,17 @@
+{
+  "loading": "Chargement...",
+  "kicker": "Mot du jour",
+  "title": "Vocabulaire",
+  "tagline": "Élargissez votre vocabulaire",
+  "wordOfTheDay": "Mot du jour",
+  "definitionLabel": "Définition",
+  "syllables": "Syllabes",
+  "rotation": "Rotation",
+  "related": "Associés",
+  "promptPrefix": "Exercice",
+  "sourcePrefix": "Source",
+  "wordCount": "{index} sur {total}",
+  "noSyllables": "Inconnu",
+  "errorTitle": "Le vocabulaire n'a pas pu être chargé",
+  "apiFailed": "Échec de l'API avec {status}"
+}

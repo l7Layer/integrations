@@ -1,0 +1,22 @@
+{
+  "loading": "Wird geladen...",
+  "kicker": "Vogel des Tages",
+  "range": "Verbreitung",
+  "wingspan": "Spannweite",
+  "call": "Ruf",
+  "diet": "Nahrung",
+  "conservation": "Schutzstatus",
+  "migration": "Zugverhalten",
+  "scientificName": "Wissenschaftlicher Name",
+  "habitat": "Lebensraum",
+  "size": "Körperlänge",
+  "nesting": "Nest",
+  "order": "Ordnung",
+  "source": "Quelle",
+  "selectedFrom": "{count} in der Rotation",
+  "signature": "Feldnotiz",
+  "errorTitle": "Vogel konnte nicht geladen werden",
+  "imageFailed": "Vogelbild konnte nicht geladen werden.",
+  "listFailed": "Vogelliste konnte nicht geladen werden.",
+  "factsShown": "{shown} von {total} Fakten"
+}

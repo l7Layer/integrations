@@ -1,0 +1,9 @@
+{
+  "title": "Versículos bíblicos",
+  "loading": "Cargando...",
+  "fallback": "Versículo sin conexión",
+  "source": "Fuente",
+  "errorTitle": "No se pudo cargar el versículo",
+  "qrAlt": "Código QR del versículo fuente",
+  "apiFailed": "La API falló con {status}"
+}

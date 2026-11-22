@@ -1,0 +1,11 @@
+{
+  "loading": "Cargando...",
+  "updated": "Actualizado",
+  "from": "desde",
+  "errorTitle": "No se pudo cargar la viñeta de The Onion",
+  "apiFailed": "La API falló con {status}",
+  "source": "The Onion",
+  "section": "Viñeta editorial",
+  "credit": "theonion.com",
+  "imageFailed": "No se pudo cargar la imagen de la viñeta"
+}

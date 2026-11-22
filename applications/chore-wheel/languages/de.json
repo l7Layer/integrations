@@ -1,0 +1,12 @@
+{
+  "assignmentsTitle": "Aufgaben",
+  "todayLabel": "Heute",
+  "thisWeekLabel": "Diese Woche",
+  "nextDayLabel": "Danach",
+  "nextWeekLabel": "Nächste Woche",
+  "emptyMembers": "Bewohner in den Einstellungen ergänzen.",
+  "emptyChores": "Aufgaben in den Einstellungen ergänzen.",
+  "errorTitle": "Aufgabenrad konnte nicht geladen werden",
+  "title": "Aufgabenrad",
+  "defaultChores": "Geschirr\nMüll\nStaubsaugen\nBad\nPflanzen"
+}

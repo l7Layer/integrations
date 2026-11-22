@@ -1,0 +1,14 @@
+{
+  "loading": "Laden...",
+  "date": "Datum",
+  "name": "Name",
+  "group": "Gruppe",
+  "configuredNeededTitle": "Google-Tabellen-ID eintragen",
+  "configuredNeededCopy": "Füge in den Integrationseinstellungen eine öffentliche Google-Tabellen-ID oder -URL ein.",
+  "emptyTitle": "Keine Zeilen gefunden",
+  "emptyCopy": "Die Tabelle wurde geladen, enthält aber keine anzeigbaren Zeilen.",
+  "updated": "Aktualisiert",
+  "errorTitle": "Tabelle konnte nicht geladen werden",
+  "defaultTitle": "Tabelle",
+  "apiFailed": "API-Aufruf fehlgeschlagen ({status})"
+}

@@ -1,0 +1,11 @@
+{
+  "loading": "Wird geladen...",
+  "updated": "Aktualisiert",
+  "from": "von",
+  "errorTitle": "Karikatur von The Onion konnte nicht geladen werden",
+  "apiFailed": "API-Aufruf fehlgeschlagen ({status})",
+  "source": "The Onion",
+  "section": "Redaktionskarikatur",
+  "credit": "theonion.com",
+  "imageFailed": "Bild der Karikatur konnte nicht geladen werden"
+}

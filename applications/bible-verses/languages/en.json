@@ -1,0 +1,9 @@
+{
+  "title": "Bible Verses",
+  "loading": "Loading...",
+  "fallback": "Offline verse",
+  "source": "Source",
+  "errorTitle": "Verse could not load",
+  "qrAlt": "QR code for source verse",
+  "apiFailed": "API failed with {status}"
+}

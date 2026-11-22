@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="paperless:epd-optimize" content='{"intent":"readable"}' />
+    <title>Chore Wheel</title>
+    <link rel="stylesheet" href="/assets/paperless.css" />
+    <script src="/assets/paperless.iife.js"></script>
+    <style>
+      .chore-screen {
+        --wheel-blue: #2563eb;
+        --wheel-red: #ef4444;
+        --wheel-green: #16a34a;
+        --wheel-orange: #ff7f00;
+        --wheel-blue-soft: #dbeafe;
+        --wheel-red-soft: #fee2e2;
+        --wheel-green-soft: #dcfce7;
+        --wheel-orange-soft: #ffedd5;
+        --wheel-accent: var(--wheel-blue);
+        --wheel-row-1: var(--wheel-blue-soft);
+        --wheel-row-2: var(--wheel-red-soft);
+        --wheel-row-3: var(--wheel-green-soft);
+        --wheel-row-4: var(--wheel-orange-soft);
+        --wheel-row-fg-1: #0f172a;
+        --wheel-row-fg-2: #0f172a;
+        --wheel-row-fg-3: #0f172a;
+        --wheel-row-fg-4: #0f172a;
+        --wheel-next-fg: #475569;
+        --wheel-segment-1: var(--wheel-blue);
+        --wheel-segment-2: var(--wheel-red);
+        --wheel-segment-3: var(--wheel-green);
+        --wheel-segment-4: var(--wheel-orange);
+        padding: 20px;
+        gap: 12px;
+      }
+
+      .chore-period {
+        display: inline-grid;
+        grid-template-columns: auto auto;
+        gap: 8px;
+        align-items: baseline;
+        justify-content: center;
+        max-width: 100%;
+        padding: 7px 10px;
+        border: 3px solid currentColor;
+        background: var(--pp-bg);
+        text-align: center;
+      }
+
+      .period-label {
+        margin: 0;
+        color: var(--pp-fg);
+        font-size: 0.74rem;
+        line-height: 1;
+        font-weight: 880;
+        text-transform: uppercase;
+      }
+
+      .period-value {
+        margin: 0;
+        font-size: 1.02rem;
+        line-height: 1;
+        font-weight: 920;
+      }
+
+      .chore-layout {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: minmax(176px, 0.72fr) minmax(0, 1.4fr);
+        gap: 14px;
+      }
+
+      .wheel-panel,
+      .assignment-panel {
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      .wheel-panel {
+        display: grid;
+        align-content: center;
+        justify-items: center;
+        gap: 18px;
+      }
+
+      .wheel {
+        --wheel-label-radius: -84px;
+        width: min(100%, 252px);
+        aspect-ratio: 1;
+        border: 5px solid currentColor;
+        border-radius: 50%;
+        position: relative;
+        background:
+          conic-gradient(
+            from -90deg,
+            var(--wheel-segment-1) 0deg 118deg,
+            currentColor 118deg 120deg,
+            var(--wheel-segment-2) 120deg 238deg,
+            currentColor 238deg 240deg,
+            var(--wheel-segment-3) 240deg 358deg,
+            currentColor 358deg 360deg
+          );
+        box-shadow: 0 0 0 8px color-mix(in srgb, var(--pp-card) 76%, transparent);
+      }
+
+      .wheel::before {
+        content: "";
+        position: absolute;
+        inset: 15%;
+        border: 2px solid color-mix(in srgb, var(--pp-bg) 76%, transparent);
+        border-radius: 50%;
+      }
+
+      .wheel-labels {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+      }
+
+      .wheel-label {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        display: inline-grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 4px;
+        align-items: center;
+        max-width: 92px;
+        padding: 2px 5px 2px 3px;
+        border: 2px solid currentColor;
+        background: var(--pp-bg);
+        font-size: 0.78rem;
+        line-height: 1;
+        font-weight: 920;
+        transform:
+          translate(-50%, -50%)
+          rotate(var(--angle))
+          translateY(var(--wheel-label-radius))
+          rotate(calc(var(--angle) * -1));
+      }
+
+      .wheel-label-index {
+        display: grid;
+        place-items: center;
+        width: 1.25rem;
+        height: 1.25rem;
+        border-radius: 50%;
+        background: currentColor;
+      }
+
+      .wheel-label-index span {
+        color: #fff;
+      }
+
+      .wheel-label-name {
+        min-width: 0;
+        overflow: hidden;
+        color: #0f172a;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .wheel-center {
+        position: absolute;
+        inset: 31%;
+        display: grid;
+        place-items: center;
+        border: 4px solid currentColor;
+        border-radius: 50%;
+        background: var(--pp-bg);
+        font-size: 2.9rem;
+        line-height: 1;
+        font-weight: 950;
+      }
+
+      .wheel-marker {
+        position: absolute;
+        top: -15px;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-left: 16px solid transparent;
+        border-right: 16px solid transparent;
+        border-top: 28px solid currentColor;
+        transform: translateX(-50%);
+      }
+
+      .assignment-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+      }
+
+      .section-title {
+        margin: 0;
+        font-size: 1rem;
+        line-height: 1;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .assignments {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        grid-auto-rows: minmax(0, 1fr);
+        gap: 7px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        overflow: hidden;
+      }
+
+      .assignment {
+        min-width: 0;
+        display: grid;
+        grid-template-columns: 2rem minmax(0, 1.1fr) minmax(0, 0.9fr);
+        gap: 10px;
+        align-items: center;
+        min-height: 0;
+        padding: 8px 10px;
+        border: 2px solid var(--pp-border);
+        border-left: 8px solid var(--assignment-accent, var(--wheel-accent));
+        background: var(--wheel-row-bg, var(--pp-card));
+        color: var(--wheel-row-fg, var(--pp-fg));
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pp-bg) 60%, transparent);
+      }
+
+      .assignment-index {
+        display: grid;
+        place-items: center;
+        width: 2rem;
+        height: 2rem;
+        border: 2px solid currentColor;
+        border-radius: 50%;
+        background: var(--assignment-accent, var(--wheel-accent));
+        color: #fff;
+        font-size: 0.78rem;
+        line-height: 1;
+        font-weight: 920;
+      }
+
+      .chore-name,
+      .member-name,
+      .next-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .chore-name {
+        font-size: 1.08rem;
+        line-height: 1.06;
+        font-weight: 840;
+      }
+
+      .member-name {
+        color: var(--wheel-member-fg, var(--wheel-accent));
+        font-size: 1.22rem;
+        line-height: 1;
+        font-weight: 930;
+        text-align: right;
+      }
+
+      .next-name {
+        grid-column: 2 / span 2;
+        margin-top: -2px;
+        padding-top: 5px;
+        border-top: 1px solid var(--pp-border);
+        color: var(--wheel-next-fg, var(--pp-muted));
+        font-size: 0.72rem;
+        line-height: 1;
+        font-weight: 760;
+        text-align: right;
+        text-transform: uppercase;
+      }
+
+      .empty-state {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        place-items: center;
+        padding: 22px;
+        border: 3px dashed var(--pp-border);
+        color: var(--pp-muted);
+        font-size: 1.35rem;
+        line-height: 1.14;
+        font-weight: 820;
+        text-align: center;
+      }
+
+      .is-hidden {
+        display: none !important;
+      }
+
+      @media (orientation: portrait) {
+        .chore-screen {
+          padding: 18px;
+          gap: 12px;
+        }
+
+        .chore-period {
+          width: max-content;
+        }
+
+        .chore-layout {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto minmax(0, 1fr);
+          gap: 12px;
+        }
+
+        .wheel {
+          --wheel-label-radius: -54px;
+          width: min(100%, 164px);
+        }
+
+        .wheel-center {
+          font-size: 2rem;
+        }
+
+        .wheel-label {
+          max-width: 70px;
+          padding-right: 4px;
+          font-size: 0.58rem;
+        }
+
+        .wheel-label-index {
+          width: 1rem;
+          height: 1rem;
+        }
+      }
+
+      @media (max-width: 700px), (max-height: 560px) {
+        .chore-screen {
+          padding: 14px;
+          gap: 9px;
+        }
+
+        .chore-period {
+          padding: 7px 9px;
+          border-width: 2px;
+        }
+
+        .period-label {
+          font-size: 0.65rem;
+        }
+
+        .period-value {
+          font-size: 1rem;
+        }
+
+        .chore-layout {
+          gap: 10px;
+        }
+
+        .wheel {
+          --wheel-label-radius: -62px;
+          width: min(100%, 190px);
+          border-width: 4px;
+        }
+
+        .wheel-center {
+          border-width: 3px;
+          font-size: 2.2rem;
+        }
+
+        .wheel-label {
+          max-width: 74px;
+          font-size: 0.62rem;
+        }
+
+        .wheel-label-index {
+          width: 1.05rem;
+          height: 1.05rem;
+        }
+
+        .assignment-panel {
+          gap: 7px;
+        }
+
+        .section-title {
+          font-size: 0.82rem;
+        }
+
+        .assignments {
+          gap: 5px;
+        }
+
+        .assignment {
+          gap: 7px;
+          padding: 6px 8px;
+          border-width: 2px;
+          border-left-width: 6px;
+          grid-template-columns: 1.7rem minmax(0, 1.1fr) minmax(0, 0.9fr);
+        }
+
+        .assignment-index {
+          width: 1.7rem;
+          height: 1.7rem;
+          font-size: 0.68rem;
+        }
+
+        .chore-name {
+          font-size: 0.9rem;
+        }
+
+        .member-name {
+          font-size: 1.02rem;
+        }
+
+        .next-name {
+          font-size: 0.62rem;
+        }
+
+        .empty-state {
+          font-size: 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="website-has-loading-element"></div>
+    <main class="pp-screen chore-screen" id="screen">
+      <section class="chore-layout">
+        <aside class="wheel-panel" aria-hidden="true">
+          <div class="wheel">
+            <div class="wheel-marker"></div>
+            <div class="wheel-labels" id="wheelLabels"></div>
+            <div class="wheel-center" id="wheelCenter">0</div>
+          </div>
+          <div class="chore-period">
+            <p class="period-label" id="periodLabel">This week</p>
+            <p class="period-value" id="periodValue"></p>
+          </div>
+        </aside>
+
+        <section class="assignment-panel">
+          <h2 class="section-title" id="assignmentsTitle">Assignments</h2>
+          <ul class="assignments" id="assignments"></ul>
+          <p class="empty-state is-hidden" id="emptyState"></p>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      (async function render() {
+        const {
+          waitForPayload,
+          getSettings,
+          getQuerySettings,
+          mergeSettings,
+          loadLanguageJson,
+          applyColorTheme,
+          fitHyphenatedText,
+          fitToScreen,
+          escapeHtml,
+          markLoading,
+          markReady,
+          markError,
+        } = window.PaperlessOpenIntegration;
+
+        const defaults = {
+          color: "light",
+          members: "Alex\nSam\nMira\nJonas",
+          chores: "Dishes\nTrash\nVacuum\nBathroom\nPlants",
+          rotation: "weekly",
+          seed: "home",
+          showNext: true,
+        };
+
+        const fallbackMessages = {
+          defaultChores: "Dishes\nTrash\nVacuum\nBathroom\nPlants",
+          assignmentsTitle: "Assignments",
+          todayLabel: "Today",
+          thisWeekLabel: "This week",
+          nextDayLabel: "Next",
+          nextWeekLabel: "Next week",
+          emptyMembers: "Add household members in settings.",
+          emptyChores: "Add chores in settings.",
+          errorTitle: "Chore Wheel could not load",
+        };
+
+        function parseList(value) {
+          return String(value || "")
+            .replace(/\r\n?/g, "\n")
+            .split(/[,\n]/)
+            .map((item) => item.trim())
+            .filter(Boolean)
+            .slice(0, 12);
+        }
+
+        function hashString(value) {
+          let hash = 2166136261;
+          const input = String(value || "");
+          for (let i = 0; i < input.length; i += 1) {
+            hash ^= input.charCodeAt(i);
+            hash = Math.imul(hash, 16777619);
+          }
+          return hash >>> 0;
+        }
+
+        function pad(number) {
+          return String(number).padStart(2, "0");
+        }
+
+        function startOfLocalDay(date) {
+          return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        }
+
+        function getDayPeriod(date) {
+          const day = startOfLocalDay(date);
+          return {
+            key: `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`,
+            label: `${pad(day.getDate())}.${pad(day.getMonth() + 1)}.${day.getFullYear()}`,
+          };
+        }
+
+        function getIsoWeekPeriod(date) {
+          const day = startOfLocalDay(date);
+          day.setDate(day.getDate() + 3 - ((day.getDay() + 6) % 7));
+          const weekOne = new Date(day.getFullYear(), 0, 4);
+          const week = 1 + Math.round(
+            ((day - weekOne) / 86400000 - 3 + ((weekOne.getDay() + 6) % 7)) / 7,
+          );
+          return {
+            key: `${day.getFullYear()}-W${pad(week)}`,
+            label: `${day.getFullYear()} W${pad(week)}`,
+          };
+        }
+
+        function getPeriod(date, rotation) {
+          return rotation === "daily" ? getDayPeriod(date) : getIsoWeekPeriod(date);
+        }
+
+        function getNextDate(date, rotation) {
+          const next = startOfLocalDay(date);
+          next.setDate(next.getDate() + (rotation === "daily" ? 1 : 7));
+          return next;
+        }
+
+        function buildAssignments(members, chores, rotation, seed, date) {
+          const period = getPeriod(date, rotation);
+          const offset = members.length
+            ? hashString(`${seed}|${rotation}|${period.key}`) % members.length
+            : 0;
+          return chores.map((chore, index) => ({
+            chore,
+            member: members[(index + offset) % members.length],
+          }));
+        }
+
+        function getColorIndex(index) {
+          return index % 4 + 1;
+        }
+
+        function getAssignmentInlineStyle(index) {
+          const colorIndex = getColorIndex(index);
+          return [
+            `--wheel-row-bg: var(--wheel-row-${colorIndex})`,
+            `--wheel-row-fg: var(--wheel-row-fg-${colorIndex})`,
+            `--assignment-accent: var(--wheel-segment-${colorIndex})`,
+            `--wheel-member-fg: var(--wheel-segment-${colorIndex})`,
+          ].join("; ");
+        }
+
+        function renderWheel(assignments) {
+          const wheel = document.querySelector(".wheel");
+          const labels = document.getElementById("wheelLabels");
+          const center = document.getElementById("wheelCenter");
+          const count = assignments.length;
+          center.textContent = String(count);
+
+          if (!count) {
+            labels.innerHTML = "";
+            wheel.style.background = "var(--pp-card)";
+            return;
+          }
+
+          const slice = 360 / count;
+          const divider = count > 1 ? Math.min(2, slice * 0.14) : 0;
+          const stops = assignments.flatMap((assignment, index) => {
+            const start = index * slice;
+            const end = (index + 1) * slice;
+            const color = `var(--wheel-segment-${getColorIndex(index)})`;
+            if (!divider) {
+              return [`${color} ${start}deg ${end}deg`];
+            }
+            return [
+              `${color} ${start}deg ${end - divider}deg`,
+              `currentColor ${end - divider}deg ${end}deg`,
+            ];
+          });
+          wheel.style.background = `conic-gradient(from -90deg, ${stops.join(", ")})`;
+          labels.innerHTML = assignments
+            .map((assignment, index) => {
+              const angle = index * slice + slice / 2;
+              const colorIndex = getColorIndex(index);
+              return `<span class="wheel-label" style="--angle: ${angle}deg; color: var(--wheel-segment-${colorIndex})"><span class="wheel-label-index"><span>${index + 1}</span></span><span class="wheel-label-name">${escapeHtml(assignment.member)}</span></span>`;
+            })
+            .join("");
+        }
+
+        function renderAssignments(assignments, nextAssignments, showNext, messages, rotation) {
+          const nextLabel = rotation === "daily" ? messages.nextDayLabel : messages.nextWeekLabel;
+          return assignments
+            .map((assignment, index) => {
+              const next = nextAssignments[index]?.member || "";
+              const nextHtml = showNext
+                ? `<span class="next-name">${escapeHtml(nextLabel)}: ${escapeHtml(next)}</span>`
+                : "";
+              return `<li class="assignment" style="${getAssignmentInlineStyle(index)}"><span class="assignment-index">${index + 1}</span><span class="chore-name">${escapeHtml(assignment.chore)}</span><span class="member-name">${escapeHtml(assignment.member)}</span>${nextHtml}</li>`;
+            })
+            .join("");
+        }
+
+        function isTrue(value) {
+          return value === true || value === "true";
+        }
+
+        let messages = fallbackMessages;
+
+        async function renderPayload(payload) {
+          try {
+            markLoading?.();
+            const settings = mergeSettings(defaults, getSettings(payload), getQuerySettings());
+            const languageResult = await loadLanguageJson(payload).catch(() => ({
+              language: "en",
+              messages: {},
+            }));
+            messages = {
+              ...fallbackMessages,
+              ...(languageResult.messages || {}),
+            };
+            document.documentElement.lang = languageResult.language || "en";
+
+            applyColorTheme(settings.color, { defaultTheme: defaults.color });
+
+            const rotation = settings.rotation === "daily" ? "daily" : "weekly";
+            const members = parseList(settings.members);
+            const choreInput =
+              settings.chores === defaults.chores
+                ? messages.defaultChores || defaults.chores
+                : settings.chores;
+            const chores = parseList(choreInput);
+            const seed = String(settings.seed || defaults.seed).trim();
+            const now = new Date();
+            const period = getPeriod(now, rotation);
+            const nextDate = getNextDate(now, rotation);
+            const showNext = isTrue(settings.showNext);
+
+            document.getElementById("assignmentsTitle").textContent = messages.assignmentsTitle;
+            document.getElementById("periodLabel").textContent =
+              rotation === "daily" ? messages.todayLabel : messages.thisWeekLabel;
+            document.getElementById("periodValue").textContent = period.label;
+
+            const assignmentList = document.getElementById("assignments");
+            const emptyState = document.getElementById("emptyState");
+            if (!members.length || !chores.length) {
+              assignmentList.classList.add("is-hidden");
+              emptyState.classList.remove("is-hidden");
+              emptyState.textContent = members.length ? messages.emptyChores : messages.emptyMembers;
+              renderWheel([]);
+            } else {
+              assignmentList.classList.remove("is-hidden");
+              emptyState.classList.add("is-hidden");
+              const assignments = buildAssignments(members, chores, rotation, seed, now);
+              const nextAssignments = buildAssignments(members, chores, rotation, seed, nextDate);
+              renderWheel(assignments);
+              assignmentList.innerHTML = renderAssignments(
+                assignments,
+                nextAssignments,
+                showNext,
+                messages,
+                rotation,
+              );
+            }
+
+            await document.fonts?.ready;
+            document.querySelectorAll(".chore-name, .member-name").forEach((element) => {
+              fitHyphenatedText(element, {
+                min: 10,
+                max: 28,
+                step: 1,
+                tolerance: 6,
+                fitParent: element,
+              });
+            });
+            document.querySelectorAll(".wheel-label-name").forEach((element) => {
+              fitHyphenatedText(element, {
+                min: 7,
+                max: 13,
+                step: 1,
+                tolerance: 2,
+                fitParent: element,
+              });
+            });
+            document.querySelectorAll(".next-name").forEach((element) => {
+              fitHyphenatedText(element, {
+                min: 8,
+                max: 15,
+                step: 1,
+                tolerance: 4,
+                fitParent: element,
+              });
+            });
+            fitToScreen(document.getElementById("screen"));
+            markReady({ rotation, period: period.key });
+          } catch (error) {
+            markError(error);
+            document.body.innerHTML = `<main class="pp-screen"><h1 class="pp-title pp-error">${escapeHtml(messages.errorTitle)}</h1><p>${escapeHtml(error.message)}</p></main>`;
+          }
+        }
+
+        const payload = await waitForPayload({ timeout: 300, onUpdate: renderPayload });
+        await renderPayload(payload);
+      })();
+    </script>
+  </body>
+</html>

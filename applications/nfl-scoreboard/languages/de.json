@@ -1,0 +1,19 @@
+{
+  "loading": "Lade NFL-Anzeigetafel...",
+  "brand": "NFL-Anzeigetafel",
+  "week": "Woche",
+  "live": "Live",
+  "pregame": "Vor dem Spiel",
+  "halftime": "Halbzeit",
+  "final": "Endstand",
+  "finalOvertime": "Endstand n. V.",
+  "overtime": "Verl.",
+  "quarter": "{period}. Viertel",
+  "favorite": "Favorit",
+  "leaders": "Liga-Spitzenreiter",
+  "noGames": "Keine NFL-Spiele für diese Auswahl gefunden.",
+  "updated": "Aktualisiert",
+  "from": "von",
+  "record": "Bilanz",
+  "apiFailed": "API-Aufruf fehlgeschlagen ({status})"
+}

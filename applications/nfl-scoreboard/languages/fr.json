@@ -1,0 +1,19 @@
+{
+  "loading": "Chargement du tableau NFL...",
+  "brand": "Tableau NFL",
+  "week": "Semaine",
+  "live": "Direct",
+  "pregame": "Avant-match",
+  "halftime": "Mi-temps",
+  "final": "Final",
+  "finalOvertime": "Final ap. prol.",
+  "overtime": "Prol.",
+  "quarter": "{period}e quart",
+  "favorite": "Favori",
+  "leaders": "Meneurs",
+  "noGames": "Aucun match NFL trouvé pour cette sélection.",
+  "updated": "Mis à jour",
+  "from": "source",
+  "record": "Bilan",
+  "apiFailed": "Échec de l'API avec {status}"
+}

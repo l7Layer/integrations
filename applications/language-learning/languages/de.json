@@ -1,0 +1,14 @@
+{
+  "loading": "Wird geladen...",
+  "kicker": "Wort des Tages",
+  "translation": "Bedeutung",
+  "pronunciation": "Aussprache",
+  "example": "Beispiel",
+  "practice": "Heute üben",
+  "memory": "Merktipp",
+  "source": "Tägliche Rotation",
+  "errorTitle": "Sprachenlernen konnte nicht geladen werden",
+  "noExample": "Beispiel ausgeblendet",
+  "notAvailable": "Keine Angabe",
+  "apiFailed": "API-Aufruf fehlgeschlagen ({status})"
+}

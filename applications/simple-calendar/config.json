@@ -1,0 +1,230 @@
+{
+  "name": "Simple Calendar",
+  "version": "0.1.0",
+  "status": "beta",
+  "description": "Shows a configurable monthly calendar.",
+  "renderPage": "./render.html",
+  "settingsPage": "./settings.html",
+  "icon": "./assets/icon.png",
+  "nativeSettings": {
+    "color": "light",
+    "locale": "en-US",
+    "monthOffset": 0,
+    "monthCount": 1,
+    "weekStart": "monday",
+    "weeklyHoliday": "sunday",
+    "holidayRegion": "off",
+    "alternateCalendar": "off",
+    "fontFamily": "system",
+    "density": "regular",
+    "weekdayLabels": "short",
+    "hideTitleBar": false,
+    "shortMonthLabel": false
+  },
+  "configVariants": [
+    {
+      "color": "light",
+      "locale": "en-US",
+      "monthOffset": 0,
+      "monthCount": 1,
+      "weekStart": "monday",
+      "weeklyHoliday": "sunday",
+      "holidayRegion": "US",
+      "alternateCalendar": "off",
+      "fontFamily": "system",
+      "density": "regular",
+      "weekdayLabels": "short",
+      "hideTitleBar": false,
+      "shortMonthLabel": false,
+      "screenshots": {
+        "800x480": "./screenshots/simple-calendar-us-regular-800x480-landscape.png",
+        "480x800": "./screenshots/simple-calendar-us-regular-480x800-portrait.png",
+        "1600x1200": "./screenshots/simple-calendar-us-regular-1600x1200-landscape.png",
+        "1200x1600": "./screenshots/simple-calendar-us-regular-1200x1600-portrait.png"
+      }
+    },
+    {
+      "color": "dark",
+      "locale": "de-DE",
+      "monthOffset": 0,
+      "monthCount": 1,
+      "weekStart": "monday",
+      "weeklyHoliday": "sunday",
+      "holidayRegion": "DE-BE",
+      "alternateCalendar": "persian",
+      "fontFamily": "serif",
+      "density": "compact",
+      "weekdayLabels": "full",
+      "hideTitleBar": false,
+      "shortMonthLabel": true,
+      "screenshots": {
+        "800x480": "./screenshots/simple-calendar-berlin-persian-compact-800x480-landscape.png",
+        "480x800": "./screenshots/simple-calendar-berlin-persian-compact-480x800-portrait.png",
+        "1600x1200": "./screenshots/simple-calendar-berlin-persian-compact-1600x1200-landscape.png",
+        "1200x1600": "./screenshots/simple-calendar-berlin-persian-compact-1200x1600-portrait.png"
+      }
+    }
+  ],
+  "formSchema": {
+    "type": "object",
+    "properties": {
+      "locale": {
+        "type": "string",
+        "title": "Locale",
+        "default": "en-US",
+        "description": "BCP 47 locale such as en-US, de-DE, fr-FR, or ja-JP.",
+        "inStettingsPage": true
+      },
+      "monthOffset": {
+        "type": "integer",
+        "title": "Start month",
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "default": 0,
+        "inStettingsPage": true
+      },
+      "weekStart": {
+        "type": "string",
+        "title": "Week starts on",
+        "enum": [
+          "sunday",
+          "monday",
+          "tuesday",
+          "wednesday",
+          "thursday",
+          "friday",
+          "saturday"
+        ],
+        "default": "monday",
+        "inStettingsPage": true
+      },
+      "monthCount": {
+        "type": "integer",
+        "title": "Months",
+        "enum": [
+          1,
+          2,
+          3
+        ],
+        "default": 1,
+        "inStettingsPage": true
+      },
+      "weeklyHoliday": {
+        "type": "string",
+        "title": "Weekly holiday",
+        "enum": [
+          "off",
+          "sunday",
+          "monday",
+          "tuesday",
+          "wednesday",
+          "thursday",
+          "friday",
+          "saturday"
+        ],
+        "default": "sunday",
+        "inStettingsPage": true
+      },
+      "holidayRegion": {
+        "type": "string",
+        "title": "Public holidays",
+        "enum": [
+          "off",
+          "DE",
+          "DE-BE",
+          "AT",
+          "CH",
+          "US",
+          "GB-ENG",
+          "FR",
+          "ES",
+          "IT",
+          "NL",
+          "CA",
+          "AU"
+        ],
+        "default": "off",
+        "inStettingsPage": true
+      },
+      "alternateCalendar": {
+        "type": "string",
+        "title": "Alternate calendar",
+        "enum": [
+          "off",
+          "buddhist",
+          "chinese",
+          "hebrew",
+          "indian",
+          "islamic",
+          "japanese",
+          "persian"
+        ],
+        "default": "off",
+        "inStettingsPage": true
+      },
+      "fontFamily": {
+        "type": "string",
+        "title": "Font",
+        "enum": [
+          "system",
+          "serif",
+          "mono"
+        ],
+        "default": "system",
+        "inStettingsPage": true
+      },
+      "density": {
+        "type": "string",
+        "title": "Font size",
+        "enum": [
+          "compact",
+          "regular",
+          "large"
+        ],
+        "default": "regular",
+        "inStettingsPage": true
+      },
+      "weekdayLabels": {
+        "type": "string",
+        "title": "Weekday labels",
+        "enum": [
+          "short",
+          "full"
+        ],
+        "default": "short",
+        "inStettingsPage": true
+      },
+      "hideTitleBar": {
+        "type": "boolean",
+        "title": "Hide title bar",
+        "default": false,
+        "inStettingsPage": true
+      },
+      "shortMonthLabel": {
+        "type": "boolean",
+        "title": "Short month label",
+        "default": false,
+        "inStettingsPage": true
+      }
+    }
+  },
+  "language": [
+    "en",
+    "de",
+    "fr",
+    "es",
+    "it"
+  ]
+}

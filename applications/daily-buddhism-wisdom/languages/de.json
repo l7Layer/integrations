@@ -1,0 +1,9 @@
+{
+  "title": "Tägliche Buddhismus-Weisheit",
+  "loading": "Wird geladen...",
+  "day": "Tag {day}",
+  "source": "Tägliches Zitat",
+  "errorTitle": "Weisheit konnte nicht geladen werden",
+  "hidden": "Weisheitstext ausgeblendet",
+  "apiFailed": "API-Aufruf fehlgeschlagen ({status})"
+}

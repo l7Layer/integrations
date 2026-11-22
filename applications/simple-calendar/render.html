@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="paperless:epd-optimize" content='{"intent":"readable"}' />
+    <title>Simple Calendar</title>
+    <link rel="stylesheet" href="/assets/paperless.css" />
+    <script src="/assets/paperless.iife.js"></script>
+    <style>
+      :root {
+        --calendar-soft: #f0f0f0;
+        --calendar-day-size: clamp(2.2rem, 8vh, 6.2rem);
+        --calendar-today-bg: #2563eb;
+        --calendar-today-fg: #ffffff;
+      }
+
+      body.dark {
+        --calendar-soft: #171717;
+        --calendar-today-bg: #60a5fa;
+        --calendar-today-fg: #050505;
+      }
+
+      .calendar-screen {
+        gap: 12px;
+        padding: 20px;
+      }
+
+      .calendar-screen.has-multiple-months {
+        --calendar-day-size: clamp(1.35rem, 4.8vh, 3rem);
+      }
+
+      .calendar-screen.font-serif {
+        font-family: Georgia, "Times New Roman", serif;
+      }
+
+      .calendar-screen.font-mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      .calendar-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+        gap: 14px;
+        min-height: 0;
+        padding-bottom: 10px;
+      }
+
+      .calendar-header.is-hidden {
+        display: none;
+      }
+
+      .calendar-title {
+        margin: 0;
+        font-size: clamp(2.5rem, 10vh, 6.8rem);
+        line-height: 0.86;
+        font-weight: 900;
+        letter-spacing: 0;
+        overflow-wrap: anywhere;
+      }
+
+      .calendar-meta {
+        margin: 0;
+        max-width: 18ch;
+        font-size: 0.95rem;
+        line-height: 1.08;
+        font-weight: 800;
+        text-align: right;
+        text-transform: uppercase;
+      }
+
+      .calendar-months {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        gap: 10px;
+      }
+
+      .calendar-months.month-count-1 {
+        display: flex;
+      }
+
+      .calendar-months.month-count-1 .calendar-board {
+        flex: 1;
+      }
+
+      .calendar-months.month-count-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .calendar-months.month-count-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .calendar-board {
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        border: 3px solid var(--pp-border);
+      }
+
+      .month-heading {
+        display: none;
+        margin: 0;
+        padding: 6px;
+        border-bottom: 3px solid var(--pp-border);
+        font-size: 0.95rem;
+        line-height: 1;
+        font-weight: 900;
+        text-align: center;
+        text-transform: uppercase;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .calendar-months.is-multiple .month-heading {
+        display: block;
+      }
+
+      .weekday-row,
+      .day-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+      }
+
+      .weekday-row {
+        border-bottom: 3px solid var(--pp-border);
+        background: var(--calendar-soft);
+      }
+
+      .weekday {
+        min-width: 0;
+        padding: 8px 6px;
+        border-right: 2px solid var(--pp-border);
+        font-size: 1.02rem;
+        line-height: 1;
+        font-weight: 900;
+        text-align: center;
+        text-transform: uppercase;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+
+      .weekday:last-child,
+      .day:nth-child(7n) {
+        border-right: 0;
+      }
+
+      .weekday.is-weekly-holiday {
+        color: var(--pp-accent);
+      }
+
+      .day-grid {
+        flex: 1;
+        height: 100%;
+        min-height: 0;
+        grid-template-rows: repeat(6, minmax(0, 1fr));
+      }
+
+      .day {
+        position: relative;
+        min-width: 0;
+        min-height: 0;
+        display: grid;
+        grid-template-rows: minmax(0, 1fr) auto;
+        gap: 3px;
+        padding: 8px;
+        border-right: 2px solid var(--pp-border);
+        border-bottom: 2px solid var(--pp-border);
+        overflow: hidden;
+      }
+
+      .day:nth-last-child(-n + 7) {
+        border-bottom: 0;
+      }
+
+      .day.outside-month {
+        color: var(--pp-muted);
+        opacity: 0.42;
+      }
+
+      .day.is-weekly-holiday {
+        background: linear-gradient(135deg, var(--calendar-soft), var(--pp-bg));
+      }
+
+      .day.has-holiday {
+        box-shadow: inset 0 -8px 0 var(--pp-accent);
+      }
+
+      .day.is-today {
+        background: var(--calendar-today-bg);
+        color: var(--calendar-today-fg);
+      }
+
+      .day-number {
+        align-self: start;
+        margin: 0;
+        font-size: var(--calendar-day-size);
+        line-height: 0.82;
+        font-weight: 900;
+        letter-spacing: 0;
+      }
+
+      .alt-day {
+        position: absolute;
+        top: 6px;
+        right: 7px;
+        margin: 0;
+        max-width: 6ch;
+        font-size: 0.78rem;
+        line-height: 1;
+        font-weight: 850;
+        text-align: right;
+      }
+
+      .holiday-name {
+        margin: 0;
+        min-height: 1em;
+        font-size: 0.73rem;
+        line-height: 1;
+        font-weight: 850;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .density-compact {
+        --calendar-day-size: clamp(1.9rem, 7vh, 5.3rem);
+      }
+
+      .density-large {
+        --calendar-day-size: clamp(2.7rem, 10vh, 7.5rem);
+      }
+
+      .calendar-screen.has-multiple-months.density-compact {
+        --calendar-day-size: clamp(1.05rem, 4vh, 2.35rem);
+      }
+
+      .calendar-screen.has-multiple-months.density-large {
+        --calendar-day-size: clamp(1.65rem, 5.2vh, 3.45rem);
+      }
+
+      .weekday-label-full {
+        display: none;
+      }
+
+      .weekday-row.is-full .weekday-label-short {
+        display: none;
+      }
+
+      .weekday-row.is-full .weekday-label-full {
+        display: inline;
+      }
+
+      @media (orientation: portrait) {
+        .calendar-screen {
+          --calendar-day-size: clamp(2rem, 9vw, 3rem);
+          padding: 22px 18px;
+          gap: 14px;
+        }
+
+        .calendar-screen.density-compact {
+          --calendar-day-size: clamp(1.65rem, 7.4vw, 2.55rem);
+        }
+
+        .calendar-screen.density-large {
+          --calendar-day-size: clamp(2.15rem, 9.4vw, 3.25rem);
+        }
+
+        .calendar-screen.has-multiple-months {
+          --calendar-day-size: clamp(1rem, 4.8vw, 2rem);
+        }
+
+        .calendar-screen.has-multiple-months.density-compact {
+          --calendar-day-size: clamp(0.86rem, 4vw, 1.65rem);
+        }
+
+        .calendar-screen.has-multiple-months.density-large {
+          --calendar-day-size: clamp(1.18rem, 5.4vw, 2.25rem);
+        }
+
+        .calendar-header {
+          grid-template-columns: 1fr;
+          align-items: start;
+          gap: 6px;
+        }
+
+        .calendar-title {
+          font-size: clamp(2.7rem, 8vh, 5.8rem);
+        }
+
+        .calendar-meta {
+          max-width: 100%;
+          text-align: left;
+          font-size: 0.86rem;
+        }
+
+        .day {
+          padding: 7px 6px;
+        }
+
+        .holiday-name {
+          font-size: 0.62rem;
+        }
+      }
+
+      @media (max-width: 700px), (max-height: 560px) {
+        .calendar-screen {
+          padding: 12px;
+          gap: 8px;
+        }
+
+        .calendar-header {
+          padding-bottom: 6px;
+          border-bottom-width: 3px;
+        }
+
+        .calendar-title {
+          font-size: clamp(2rem, 11vh, 4.6rem);
+        }
+
+        .calendar-meta {
+          font-size: 0.68rem;
+        }
+
+        .calendar-board {
+          border-width: 2px;
+        }
+
+        .calendar-months {
+          gap: 6px;
+        }
+
+        .month-heading {
+          padding: 5px 4px;
+          border-bottom-width: 2px;
+          font-size: 0.66rem;
+        }
+
+        .weekday-row {
+          border-bottom-width: 2px;
+        }
+
+        .weekday {
+          padding: 6px 2px;
+          border-right-width: 1px;
+          font-size: 0.68rem;
+        }
+
+        .day {
+          padding: 5px 4px;
+          border-right-width: 1px;
+          border-bottom-width: 1px;
+          gap: 2px;
+        }
+
+        .day-number {
+          font-size: var(--calendar-day-size);
+        }
+
+        .alt-day {
+          top: 4px;
+          right: 4px;
+          font-size: 0.52rem;
+        }
+
+        .holiday-name {
+          font-size: 0.48rem;
+        }
+
+        .day.has-holiday {
+          box-shadow: inset 0 -5px 0 var(--pp-accent);
+        }
+
+      }
+
+      @media (max-height: 430px) {
+        .calendar-header {
+          display: none;
+        }
+      }
+
+      @media (orientation: portrait) {
+        .calendar-months.month-count-3 {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="website-has-loading-element"></div>
+    <main class="pp-screen calendar-screen" id="app">
+      <header class="calendar-header" id="calendar-header">
+        <h1 class="calendar-title pp-fit" id="calendar-title" data-i18n="title">
+          Calendar
+        </h1>
+        <p class="calendar-meta" id="calendar-meta"></p>
+      </header>
+
+      <section class="calendar-months month-count-1" id="calendar-months"></section>
+    </main>
+
+    <script>
+      (async function render() {
+        const {
+          waitForPayload,
+          getSettings,
+          getQuerySettings,
+          mergeSettings,
+          applyColorTheme,
+          escapeHtml,
+          fitText,
+          fitToScreen,
+          markLoading,
+          markReady,
+          markError,
+        } = window.PaperlessOpenIntegration;
+
+        const defaultMessages = {
+          loading: "Loading...",
+          updated: "Updated",
+          from: "from",
+          errorTitle: "Calendar could not load",
+          apiFailed: "API failed with {status}",
+          title: "Calendar",
+        };
+        let messages = defaultMessages;
+        let currentLanguage = "en";
+
+        function t(key, values = {}) {
+          const template =
+            typeof messages[key] === "string"
+              ? messages[key]
+              : defaultMessages[key] || key;
+          return template.replace(
+            /\{(\w+)\}/g,
+            (_match, name) => values[name] ?? "",
+          );
+        }
+
+        function applyStaticMessages(root = document) {
+          root.querySelectorAll("[data-i18n]").forEach((element) => {
+            element.textContent = t(element.dataset.i18n);
+          });
+        }
+
+        async function loadMessages(payload) {
+          const loader = window.PaperlessOpenIntegration.loadLanguageJson;
+          let result;
+
+          if (typeof loader === "function") {
+            result = await loader(payload);
+          } else {
+            const requested = String(payload?.meta?.language || "en").trim();
+            const requestedBase = requested.split("-")[0].toLowerCase();
+            const supported = ["en", "de", "fr", "es", "it"];
+            const language = supported.includes(requested)
+              ? requested
+              : supported.includes(requestedBase)
+                ? requestedBase
+                : "en";
+            const response = await fetch(`./languages/${language}.json`, {
+              cache: "no-store",
+            });
+
+            if (!response.ok) {
+              throw new Error(
+                `Could not load language JSON for ${language}: ${response.status}`,
+              );
+            }
+
+            result = {
+              language,
+              messages: await response.json(),
+            };
+          }
+
+          messages = { ...defaultMessages, ...result.messages };
+          currentLanguage = result.language || "en";
+          document.documentElement.lang = currentLanguage;
+          applyStaticMessages();
+          return result;
+        }
+
+        const defaults = {
+          color: "light",
+          locale: "en-US",
+          monthOffset: 0,
+          monthCount: 1,
+          weekStart: "monday",
+          weeklyHoliday: "sunday",
+          holidayRegion: "off",
+          alternateCalendar: "off",
+          fontFamily: "system",
+          density: "regular",
+          weekdayLabels: "short",
+          hideTitleBar: false,
+          shortMonthLabel: false,
+        };
+
+        function isEnabled(value) {
+          return value === true || value === "true" || value === "1";
+        }
+
+        function classNameForDay(day) {
+          const classes = ["day"];
+          if (!day.inMonth) classes.push("outside-month");
+          if (day.isToday) classes.push("is-today");
+          if (day.isWeeklyHoliday) classes.push("is-weekly-holiday");
+          if (day.holiday) classes.push("has-holiday");
+          return classes.join(" ");
+        }
+
+        function normalizeWeekdayLabels(value) {
+          return value === "full" || value === "show" ? "full" : "short";
+        }
+
+        function normalizeMonthCount(value) {
+          const number = Number(value);
+          return Number.isFinite(number)
+            ? Math.min(3, Math.max(1, Math.trunc(number)))
+            : 1;
+        }
+
+        function normalizeMonthOffset(value) {
+          const number = Number(value);
+          return Number.isFinite(number)
+            ? Math.min(11, Math.max(0, Math.trunc(number)))
+            : 0;
+        }
+
+        function renderWeekdays(weekdays) {
+          return weekdays
+            .map(
+              (weekday) => `
+              <div class="weekday ${weekday.isWeeklyHoliday ? "is-weekly-holiday" : ""}">
+                <span class="weekday-label-short">${escapeHtml(weekday.short)}</span>
+                <span class="weekday-label-full">${escapeHtml(weekday.full)}</span>
+              </div>
+            `,
+            )
+            .join("");
+        }
+
+        function renderDays(days) {
+          return days
+            .map(
+              (day) => `
+              <article class="${classNameForDay(day)}">
+                <p class="day-number">${escapeHtml(day.day)}</p>
+                ${day.alternateDay ? `<p class="alt-day">${escapeHtml(day.alternateDay)}</p>` : ""}
+                <p class="holiday-name">${escapeHtml(day.holiday)}</p>
+              </article>
+            `,
+            )
+            .join("");
+        }
+
+        async function renderPayload(payload) {
+          try {
+            markLoading?.();
+            await loadMessages(payload);
+            const settings = mergeSettings(
+              defaults,
+              getSettings(payload),
+              getQuerySettings(),
+            );
+            settings.weekdayLabels = normalizeWeekdayLabels(
+              settings.weekdayLabels,
+            );
+            settings.monthOffset = normalizeMonthOffset(settings.monthOffset);
+            settings.monthCount = normalizeMonthCount(settings.monthCount);
+            applyColorTheme(settings.color, { defaultTheme: defaults.color });
+
+            const app = document.getElementById("app");
+            app.classList.remove(
+              "font-system",
+              "font-serif",
+              "font-mono",
+              "density-regular",
+              "density-compact",
+              "density-large",
+            );
+            app.classList.add(
+              `font-${settings.fontFamily || defaults.fontFamily}`,
+            );
+            app.classList.add(
+              `density-${settings.density || defaults.density}`,
+            );
+            app.classList.toggle("has-multiple-months", settings.monthCount > 1);
+
+            const params = new URLSearchParams(settings);
+            const response = await fetch(`./api/data?${params.toString()}`, {
+              cache: "no-store",
+            });
+            if (!response.ok) {
+              throw new Error(t("apiFailed", { status: response.status }));
+            }
+
+            const data = await response.json();
+            const header = document.getElementById("calendar-header");
+            header.classList.toggle(
+              "is-hidden",
+              isEnabled(settings.hideTitleBar),
+            );
+            document.getElementById("calendar-title").textContent = isEnabled(
+              settings.shortMonthLabel,
+            )
+              ? data.compactTitle
+              : data.title;
+
+            const meta = [];
+            if (data.settings.holidayRegion !== "off") {
+              meta.push(data.settings.holidayRegionName);
+            }
+            if (data.settings.alternateCalendar !== "off") {
+              meta.push(data.settings.alternateCalendar);
+            }
+            document.getElementById("calendar-meta").textContent =
+              meta.join(" / ");
+
+            const months = Array.isArray(data.months) ? data.months : [data];
+            const calendarMonths = document.getElementById("calendar-months");
+            calendarMonths.classList.remove(
+              "month-count-1",
+              "month-count-2",
+              "month-count-3",
+            );
+            calendarMonths.classList.add(`month-count-${months.length}`);
+            calendarMonths.classList.toggle("is-multiple", months.length > 1);
+            calendarMonths.innerHTML = months
+              .map((month) => {
+                const title = isEnabled(settings.shortMonthLabel)
+                  ? month.compactTitle
+                  : month.title;
+                return `
+                  <article class="calendar-board">
+                    <h2 class="month-heading">${escapeHtml(title)}</h2>
+                    <div class="weekday-row ${settings.weekdayLabels === "full" ? "is-full" : ""}">
+                      ${renderWeekdays(data.weekdays)}
+                    </div>
+                    <div class="day-grid">${renderDays(month.days)}</div>
+                  </article>
+                `;
+              })
+              .join("");
+
+            await document.fonts?.ready;
+            fitText(document.getElementById("calendar-title"), {
+              min: 28,
+              max: 120,
+              step: 2,
+              tolerance: 10,
+              lineBreak: "balance",
+            });
+            fitToScreen();
+            markReady({ month: data.title });
+          } catch (error) {
+            markError(error);
+            document.body.innerHTML = `<main class="pp-screen"><h1 class="pp-title pp-error">${escapeHtml(t("errorTitle"))}</h1><p>${escapeHtml(error.message)}</p></main>`;
+          }
+        }
+
+        const payload = await waitForPayload({
+          timeout: 300,
+          onUpdate: renderPayload,
+        });
+        await renderPayload(payload);
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "loading": "Lädt...",
+  "kicker": "Wort des Tages",
+  "title": "Vokabeln",
+  "tagline": "Erweitere deinen Wortschatz",
+  "wordOfTheDay": "Wort des Tages",
+  "definitionLabel": "Definition",
+  "syllables": "Silben",
+  "rotation": "Rotation",
+  "related": "Ähnlich",
+  "promptPrefix": "Üben",
+  "sourcePrefix": "Quelle",
+  "wordCount": "{index} von {total}",
+  "noSyllables": "Unbekannt",
+  "errorTitle": "Vokabeln konnten nicht geladen werden",
+  "apiFailed": "API-Aufruf fehlgeschlagen ({status})"
+}

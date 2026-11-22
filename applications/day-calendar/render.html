@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="paperless:epd-optimize" content='{"intent":"faithful","palette":"spectra6OriginalPalette","canvasDitherOptions":{"ditheringType":"errorDiffusion"}}' />
+    <title>Day Calendar</title>
+    <link rel="stylesheet" href="/assets/paperless.css" />
+    <script src="/assets/paperless.iife.js"></script>
+    <style>
+      .day-calendar-screen {
+        --day-background: #000;
+        --day-foreground: #fff;
+        width: 100vw;
+        height: 100vh;
+        max-width: 100%;
+        padding: 5vmin;
+        background-color: var(--day-background);
+        color: var(--day-foreground);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        font-family:
+          "Arial Narrow", "Roboto Condensed", "Open Sans Condensed",
+          var(--pp-font);
+        font-size: 2.7em;
+        -webkit-font-smoothing: none;
+        overflow: hidden;
+      }
+
+      .day-calendar-screen.theme-light {
+        --day-background: #fff;
+        --day-foreground: #000;
+      }
+
+      .day-calendar-screen.theme-red-dark {
+        --day-background: #ff0000;
+        --day-foreground: #fff;
+      }
+
+      .day-calendar-screen.theme-red-light {
+        --day-background: #fff;
+        --day-foreground: #ff0000;
+      }
+
+      .day-calendar-screen.show-quote {
+        align-items: flex-start;
+      }
+
+      .day-calendar-screen.show-only-date {
+        align-items: center;
+        justify-content: center;
+      }
+
+      .weekday {
+        width: fit-content;
+        max-width: 100%;
+        min-height: 10vh;
+        margin: 0;
+        font-size: 2.2em;
+        line-height: 1;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .date {
+        position: relative;
+        max-width: 100%;
+        margin: 0;
+        font-size: 1.2em;
+        line-height: 1;
+        font-weight: 100;
+        white-space: nowrap;
+      }
+
+      .show-quote .date {
+        max-width: 55%;
+        max-height: 20vh;
+      }
+
+      .show-quote .date::before {
+        content: "";
+        position: absolute;
+        top: -2vmin;
+        left: 0;
+        width: 42%;
+        height: 0.1em;
+        background: var(--day-foreground);
+      }
+
+      .show-quote .weekday {
+        max-width: 90%;
+      }
+
+      .date-lockup {
+        flex: 1;
+        width: 85vw;
+        max-width: 100%;
+        min-height: 20vh;
+        margin: 0;
+        line-height: 1;
+        font-weight: 800;
+        text-align: center;
+      }
+
+      .day-number,
+      .month {
+        display: block;
+      }
+
+      .show-only-date .weekday {
+        position: relative;
+        max-width: 30vw;
+        min-height: 20vh;
+        margin-top: 10vmax;
+        font-weight: 200;
+        text-transform: none;
+      }
+
+      .show-only-date .weekday::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -20%;
+        right: -20%;
+        width: 140%;
+        height: 0.03em;
+        background: var(--day-foreground);
+      }
+
+      .show-only-date .weekday .scale-text {
+        padding: 0.5em 0;
+      }
+
+      .time {
+        margin: 1em 0 0;
+        font-size: 0.5em;
+        line-height: 1;
+      }
+
+      .quote {
+        flex: 1;
+        width: 92vw;
+        height: 45vh;
+        margin: 0 0 8vh;
+        font-size: 1.5em;
+        line-height: 1;
+        font-weight: 600;
+      }
+
+      .quote-title {
+        margin: 0 0 0.22em;
+        max-width: 100%;
+        font-size: 0.5em;
+        line-height: 1;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .quote-text {
+        margin: 0;
+        max-width: 100%;
+        padding-bottom: 2vh;
+        line-height: 1;
+      }
+
+      .quote-meta,
+      .quote-source {
+        margin: 0.45em 0 0;
+        max-width: 100%;
+        font-size: 0.34em;
+        line-height: 1.08;
+        font-weight: 400;
+      }
+
+      .quote-source {
+        opacity: 0.82;
+      }
+
+      .scale-text {
+        display: block;
+        max-width: 100%;
+        line-height: 1;
+      }
+
+      @media (max-height: 500px) {
+        .quote {
+          height: 37vh;
+        }
+      }
+
+      @media (orientation: portrait) {
+        .day-calendar-screen {
+          font-size: 2.35em;
+        }
+
+        .show-quote .date {
+          max-width: 78%;
+        }
+
+        .show-only-date .weekday {
+          max-width: 52vw;
+        }
+      }
+
+      @media (max-width: 700px), (max-height: 560px) {
+        .day-calendar-screen {
+          padding: 4vmin;
+          font-size: 1.85em;
+        }
+
+        .quote {
+          width: 91vw;
+          margin-bottom: 5vh;
+        }
+
+        .show-only-date .weekday {
+          margin-top: 6vmax;
+        }
+      }
+      .daylight-summary {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        font-size: clamp(18px, 2.5vw, 32px);
+      }
+      .daylight-summary p,
+      .daylight-summary h1,
+      .daylight-summary h2 {
+        margin: 0;
+      }
+      .daylight-summary h1 {
+        font-size: clamp(32px, 5vw, 72px);
+        line-height: 1.05;
+      }
+      .daylight-summary h2 {
+        font-size: 1.1em;
+        border-left: 8px solid var(--pp-orange, #ff8000);
+        padding-left: 12px;
+      }
+      .daylight-heading {
+        border-bottom: 5px solid var(--pp-orange, #ff8000);
+        padding-bottom: 12px;
+        font-size: 0.8em;
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+      .daylight-bars {
+        flex: 1;
+        min-height: 90px;
+        display: flex;
+        gap: 14px;
+        margin-top: 20px;
+        padding-bottom: 25px;
+      }
+      .daylight-column {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: center;
+        font-size: clamp(13px, 1.6vw, 22px);
+        position: relative;
+      }
+      .daylight-column strong {
+        font-size: 0.9em;
+        white-space: nowrap;
+        margin-bottom: 5px;
+      }
+      .daylight-column span {
+        position: absolute;
+        top: 100%;
+        margin-top: 5px;
+      }
+      .daylight-bar {
+        width: 100%;
+        background: var(--pp-blue);
+        min-height: 3px;
+      }
+      @media (orientation: portrait) {
+        .daylight-summary {
+          gap: 24px;
+          font-size: 22px;
+        }
+        .daylight-summary h1 {
+          font-size: 44px;
+        }
+        .daylight-bars {
+          gap: 8px;
+        }
+        .daylight-column {
+          font-size: 14px;
+        }
+      }
+    body.dark .daylight-bar { background: var(--pp-orange, #ff8000); }
+</style>
+  </head>
+  <body>
+    <div id="website-has-loading-element"></div>
+    <main class="day-calendar-screen" id="app">
+      <p data-i18n="loading">Loading...</p>
+    </main>
+
+    <script>
+      (async function render() {
+        const {
+          waitForPayload,
+          getSettings,
+          getQuerySettings,
+          mergeSettings,
+          applyColorTheme,
+          escapeHtml,
+          fitText,
+          fitHyphenatedText,
+          fitToScreen,
+          markLoading,
+          markReady,
+          markError,
+        } = window.PaperlessOpenIntegration;
+
+        const defaultMessages = {
+          loading: "Loading...",
+          updated: "Updated",
+          from: "from",
+          errorTitle: "Day Calendar could not load",
+          apiFailed: "API failed with {status}",
+        };
+        let messages = defaultMessages;
+        let currentLanguage = "en";
+
+        function t(key, values = {}) {
+          const template =
+            typeof messages[key] === "string"
+              ? messages[key]
+              : defaultMessages[key] || key;
+          return template.replace(
+            /\{(\w+)\}/g,
+            (_match, name) => values[name] ?? "",
+          );
+        }
+
+        function applyStaticMessages(root = document) {
+          root.querySelectorAll("[data-i18n]").forEach((element) => {
+            element.textContent = t(element.dataset.i18n);
+          });
+        }
+
+        async function loadMessages(payload) {
+          const loader = window.PaperlessOpenIntegration.loadLanguageJson;
+          let result;
+
+          if (typeof loader === "function") {
+            result = await loader(payload);
+          } else {
+            const requested = String(payload?.meta?.language || "en").trim();
+            const requestedBase = requested.split("-")[0].toLowerCase();
+            const supported = ["en", "de"];
+            const language = supported.includes(requested)
+              ? requested
+              : supported.includes(requestedBase)
+                ? requestedBase
+                : "en";
+            const response = await fetch(`./languages/${language}.json`, {
+              cache: "no-store",
+            });
+
+            if (!response.ok) {
+              throw new Error(
+                `Could not load language JSON for ${language}: ${response.status}`,
+              );
+            }
+
+            result = {
+              language,
+              messages: await response.json(),
+            };
+          }
+
+          messages = { ...defaultMessages, ...result.messages };
+          currentLanguage = result.language || "en";
+          document.documentElement.lang = currentLanguage;
+          applyStaticMessages();
+          return result;
+        }
+
+        const defaults = {
+          color: "dark",
+          kind: "primary",
+          showTime: false,
+          holidayRegion: "DE-BE",
+          latitude: 52.52,
+          longitude: 13.405,
+          timeZone: "Europe/Berlin",
+        };
+        const quoteKinds = new Set([
+          "demotivational",
+          "funny",
+          "day-progress",
+          "holiday-observance",
+          "season-daylight",
+          "word-phrase",
+          "curiosity",
+        ]);
+
+        function colorClass(color) {
+          return `theme-${String(color || defaults.color)
+            .replace(/[^a-z0-9-]/gi, "")
+            .toLowerCase()}`;
+        }
+
+        function contentLanguage(language) {
+          return String(language || "")
+            .trim()
+            .toLowerCase()
+            .startsWith("de")
+            ? "de"
+            : "en-US";
+        }
+
+        function clampTextToBox(
+          element,
+          maxWidth,
+          maxHeight,
+          min = 18,
+          tolerance = 2,
+        ) {
+          if (!element || !maxWidth || !maxHeight) {
+            return;
+          }
+
+          let size = Number.parseFloat(
+            window.getComputedStyle(element).fontSize,
+          );
+
+          while (
+            size > min &&
+            (element.scrollWidth - maxWidth > tolerance ||
+              element.scrollHeight - maxHeight > tolerance)
+          ) {
+            size -= 1;
+            element.style.fontSize = `${size}px`;
+          }
+        }
+
+        function renderDaylight(app, data) {
+          const fact = data.fact;
+          const locale = data.settings.language;
+          const maxDelta = Math.max(
+            1,
+            ...fact.trend.map((row) => Math.abs(row.deltaMinutes)),
+          );
+          app.innerHTML = `<section class="daylight-summary"><p class="daylight-heading">${escapeHtml(fact.title)} · ${escapeHtml(data.date.formattedDate)}</p><h1>${escapeHtml(fact.text)}</h1><p>${escapeHtml(fact.meta)}</p><p>${escapeHtml(fact.lightTrend)}</p><h2>${escapeHtml(fact.weekTrend)}</h2><div class="daylight-bars">${fact.trend.map((row) => `<div class="daylight-column"><strong>${row.deltaMinutes > 0 ? "+" : ""}${escapeHtml(row.deltaMinutes)} min</strong><div class="daylight-bar" style="height:${Math.max(3, Math.round((Math.abs(row.deltaMinutes) / maxDelta) * 90))}%"></div><span>${escapeHtml(new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(new Date(row.date + "T12:00:00Z")))}</span></div>`).join("")}</div></section>`;
+        }
+
+        function renderQuoteMode(app, data) {
+          const fact =
+            data.fact && typeof data.fact === "object" ? data.fact : {};
+          const quoteText = fact.text || data.quote || "";
+          const source = fact.sourceName
+            ? `${escapeHtml(t("from"))} ${escapeHtml(fact.sourceName)}`
+            : "";
+          app.innerHTML = `
+            <div class="quote" lang="${escapeHtml(data.settings.language)}">
+              ${fact.title ? `<p class="quote-title" id="quote-title">${escapeHtml(fact.title)}</p>` : ""}
+              <p class="quote-text" id="quote-text">${escapeHtml(quoteText)}</p>
+              ${fact.meta ? `<p class="quote-meta" id="quote-meta">${escapeHtml(fact.meta)}</p>` : ""}
+              ${source ? `<p class="quote-source" id="quote-source">${source}</p>` : ""}
+            </div>
+            <p class="date">
+              <span class="scale-text" id="formatted-date">${escapeHtml(data.date.formattedDate)}</span>
+            </p>
+            <h1 class="weekday">
+              <span class="scale-text" id="weekday">${escapeHtml(data.date.weekday)}</span>
+            </h1>
+            ${data.settings.showTime ? `<p class="time">${escapeHtml(data.date.time)}</p>` : ""}
+          `;
+        }
+
+        function renderDateMode(app, data) {
+          app.innerHTML = `
+            <p class="date-lockup">
+              <span class="scale-text" id="date-lockup">
+                <span class="day-number" id="day-number">${escapeHtml(data.date.day)}</span>
+                <span class="month" id="month">${escapeHtml(data.date.month)}</span>
+              </span>
+            </p>
+            <h1 class="weekday">
+              <span class="scale-text" id="weekday">${escapeHtml(data.date.weekday)}</span>
+            </h1>
+            ${data.settings.showTime ? `<p class="time">${escapeHtml(data.date.time)}</p>` : ""}
+          `;
+        }
+
+        async function renderPayload(payload) {
+          try {
+            markLoading?.();
+            await loadMessages(payload);
+            const querySettings = getQuerySettings();
+            const settings = mergeSettings(
+              defaults,
+              getSettings(payload),
+              querySettings,
+            );
+            const hostLanguage = contentLanguage(
+              payload?.meta?.language || currentLanguage,
+            );
+            const configuredLanguage =
+              typeof settings.language === "string"
+                ? settings.language.trim()
+                : "";
+            settings.language =
+              typeof querySettings.language === "string" &&
+              querySettings.language.trim()
+                ? querySettings.language.trim()
+                : configuredLanguage &&
+                    contentLanguage(configuredLanguage) === "de"
+                  ? "de"
+                  : hostLanguage;
+            const resolvedColor = applyColorTheme(settings.color, {
+              defaultTheme: defaults.color,
+            });
+            const params = new URLSearchParams(settings);
+            const response = await fetch(`./api/data?${params.toString()}`, {
+              cache: "no-store",
+            });
+
+            if (!response.ok) {
+              throw new Error(t("apiFailed", { status: response.status }));
+            }
+
+            const data = await response.json();
+            const app = document.getElementById("app");
+            const showQuote = quoteKinds.has(data.settings.kind);
+
+            app.className = [
+              "day-calendar-screen",
+              colorClass(resolvedColor),
+              data.settings.kind,
+              showQuote ? "show-quote" : "show-only-date",
+            ].join(" ");
+
+            if (data.settings.kind === "season-daylight") {
+              renderDaylight(app, data);
+            } else if (showQuote) {
+              renderQuoteMode(app, data);
+            } else {
+              renderDateMode(app, data);
+            }
+
+            await document.fonts?.ready;
+
+            if (data.settings.kind === "season-daylight") {
+              markReady({ kind: data.settings.kind });
+              return;
+            }
+            if (showQuote) {
+              fitHyphenatedText(document.getElementById("quote-text"), {
+                min: 28,
+                max: 93,
+                step: 1,
+                tolerance: 10,
+                lineBreak: "balance",
+                fitParent: document.querySelector(".quote"),
+              });
+              const quoteBox = document.querySelector(".quote");
+              const quoteMaxHeight = window.matchMedia("(max-height: 500px)")
+                .matches
+                ? window.innerHeight * 0.37
+                : window.innerHeight * 0.45;
+              clampTextToBox(
+                document.getElementById("quote-text"),
+                quoteBox.clientWidth,
+                quoteMaxHeight - window.innerHeight * 0.02,
+                18,
+              );
+              fitText(document.getElementById("formatted-date"), {
+                min: 24,
+                max: 350,
+                step: 2,
+                tolerance: 8,
+                fitParent: document.querySelector(".date"),
+              });
+            } else {
+              fitText(document.getElementById("date-lockup"), {
+                min: 34,
+                max: 500,
+                step: 2,
+                tolerance: 10,
+                lineBreak: "balance",
+                fitParent: document.querySelector(".date-lockup"),
+              });
+            }
+
+            fitText(document.getElementById("weekday"), {
+              min: 24,
+              max: 100,
+              step: 2,
+              tolerance: 8,
+              fitParent: document.querySelector(".weekday"),
+            });
+            fitToScreen();
+            markReady({ kind: data.settings.kind, dayOfYear: data.dayOfYear });
+          } catch (error) {
+            markError(error);
+            document.body.innerHTML = `<main class="pp-screen"><h1 class="pp-title pp-error">${escapeHtml(t("errorTitle"))}</h1><p>${escapeHtml(error.message)}</p></main>`;
+          }
+        }
+
+        const payload = await waitForPayload({
+          timeout: 300,
+          onUpdate: renderPayload,
+        });
+        await renderPayload(payload);
+      })();
+    </script>
+  </body>
+</html>

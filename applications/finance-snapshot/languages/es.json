@@ -1,0 +1,20 @@
+{
+  "loading": "Cargando...",
+  "updated": "Actualizado",
+  "errorTitle": "No se pudo cargar el resumen financiero",
+  "title": "Resumen financiero",
+  "subtitle": "Vista de mercado",
+  "leader": "Mayor movimiento",
+  "items": "Valores",
+  "source": "Fuente",
+  "delayed": "Los datos de mercado pueden tener retraso",
+  "noData": "No hay cotizaciones disponibles",
+  "high": "Máximo",
+  "low": "Mínimo",
+  "range": "Período",
+  "value": "Valor",
+  "price": "Precio",
+  "change": "Cambio",
+  "unit": "Unidad",
+  "apiFailed": "La API falló con estado {status}"
+}

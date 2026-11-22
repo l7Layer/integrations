@@ -1,0 +1,215 @@
+{
+  "name": "Tree of the Day",
+  "version": "0.1.0",
+  "status": "alpha",
+  "description": "Shows one deterministic daily tree with generated botanical artwork and compact Wikipedia-sourced facts.",
+  "renderPage": "./render.html",
+  "icon": "./assets/icon.png",
+  "nativeSettings": {
+    "color": "light",
+    "region": "any",
+    "category": "any",
+    "treeId": "",
+    "seed": "",
+    "textSize": "middle",
+    "showHeader": true,
+    "showSpecies": true,
+    "showRange": true,
+    "showHeight": true,
+    "showAge": true,
+    "showLeafType": true,
+    "showFruitSeed": true,
+    "showCulturalRole": true,
+    "showFamily": false,
+    "showHabitat": false,
+    "showConservation": false,
+    "showCategory": false,
+    "showFactCount": false,
+    "showRotationCount": false
+  },
+  "configVariants": [
+    {
+      "color": "light",
+      "region": "any",
+      "category": "any",
+      "treeId": "",
+      "seed": "",
+      "textSize": "middle",
+      "showHeader": true,
+      "showSpecies": true,
+      "showRange": true,
+      "showHeight": true,
+      "showAge": true,
+      "showLeafType": true,
+      "showFruitSeed": true,
+      "showCulturalRole": true,
+      "showFamily": false,
+      "showHabitat": false,
+      "showConservation": false,
+      "showCategory": false,
+      "screenshots": {
+        "800x480": "./screenshots/tree-of-the-day-default-800x480-landscape.png",
+        "480x800": "./screenshots/tree-of-the-day-default-480x800-portrait.png",
+        "1600x1200": "./screenshots/tree-of-the-day-default-1600x1200-landscape.png",
+        "1200x1600": "./screenshots/tree-of-the-day-default-1200x1600-portrait.png"
+      },
+      "showFactCount": false,
+      "showRotationCount": false
+    },
+    {
+      "color": "dark",
+      "region": "asia",
+      "category": "individual",
+      "treeId": "jaya-sri-maha-bodhi",
+      "seed": "paperlesspaper",
+      "textSize": "middle",
+      "showHeader": true,
+      "showSpecies": true,
+      "showRange": true,
+      "showHeight": true,
+      "showAge": true,
+      "showLeafType": true,
+      "showFruitSeed": true,
+      "showCulturalRole": true,
+      "showFamily": true,
+      "showHabitat": false,
+      "showConservation": false,
+      "showCategory": true,
+      "screenshots": {
+        "800x480": "./screenshots/tree-of-the-day-bodhi-800x480-landscape.png",
+        "480x800": "./screenshots/tree-of-the-day-bodhi-480x800-portrait.png",
+        "1600x1200": "./screenshots/tree-of-the-day-bodhi-1600x1200-landscape.png",
+        "1200x1600": "./screenshots/tree-of-the-day-bodhi-1200x1600-portrait.png"
+      },
+      "showFactCount": false,
+      "showRotationCount": false
+    }
+  ],
+  "formSchema": {
+    "type": "object",
+    "properties": {
+      "region": {
+        "type": "string",
+        "title": "Region",
+        "enum": [
+          "any",
+          "europe",
+          "africa",
+          "asia",
+          "north-america",
+          "south-america",
+          "oceania"
+        ],
+        "default": "any"
+      },
+      "category": {
+        "type": "string",
+        "title": "Tree set",
+        "enum": [
+          "any",
+          "species",
+          "individual"
+        ],
+        "default": "any"
+      },
+      "treeId": {
+        "type": "string",
+        "title": "Pinned tree",
+        "description": "Optional tree slug, for example coast-redwood, african-baobab, dragon-blood-tree, ginkgo, jaya-sri-maha-bodhi, olive-tree, norway-spruce, major-oak, wollemi-pine, giant-sequoia, general-sherman, bristlecone-pine, banyan, japanese-cherry, date-palm, kapok, european-yew, angel-oak, monkey-puzzle, rainbow-eucalyptus, joshua-tree, quiver-tree, red-mangrove, or silver-birch.",
+        "default": ""
+      },
+      "seed": {
+        "type": "string",
+        "title": "Rotation seed",
+        "description": "Optional text that creates a different daily rotation.",
+        "default": ""
+      },
+      "textSize": {
+        "type": "string",
+        "title": "Text size",
+        "enum": [
+          "small",
+          "middle",
+          "big"
+        ],
+        "default": "middle"
+      },
+      "showHeader": {
+        "type": "boolean",
+        "title": "Show header",
+        "default": true
+      },
+      "showFactCount": {
+        "type": "boolean",
+        "title": "Show fact count",
+        "description": "Show how many selected facts fit on the display. Hidden when all facts fit.",
+        "default": false
+      },
+      "showRotationCount": {
+        "type": "boolean",
+        "title": "Show rotation count",
+        "description": "Show the number of items in the current rotation. Requires the header to be enabled.",
+        "default": false
+      },
+      "showSpecies": {
+        "type": "boolean",
+        "title": "Show species",
+        "default": true
+      },
+      "showRange": {
+        "type": "boolean",
+        "title": "Show native range",
+        "default": true
+      },
+      "showHeight": {
+        "type": "boolean",
+        "title": "Show height",
+        "default": true
+      },
+      "showAge": {
+        "type": "boolean",
+        "title": "Show age",
+        "default": true
+      },
+      "showLeafType": {
+        "type": "boolean",
+        "title": "Show leaf type",
+        "default": true
+      },
+      "showFruitSeed": {
+        "type": "boolean",
+        "title": "Show fruit or seed",
+        "default": true
+      },
+      "showCulturalRole": {
+        "type": "boolean",
+        "title": "Show cultural role",
+        "default": true
+      },
+      "showFamily": {
+        "type": "boolean",
+        "title": "Show family",
+        "default": false
+      },
+      "showHabitat": {
+        "type": "boolean",
+        "title": "Show habitat",
+        "default": false
+      },
+      "showConservation": {
+        "type": "boolean",
+        "title": "Show conservation",
+        "default": false
+      },
+      "showCategory": {
+        "type": "boolean",
+        "title": "Show entry type",
+        "default": false
+      }
+    }
+  },
+  "language": [
+    "en",
+    "de"
+  ]
+}

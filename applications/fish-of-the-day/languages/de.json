@@ -1,0 +1,21 @@
+{
+  "loading": "Wird geladen...",
+  "kicker": "Fisch des Tages",
+  "period": "Zeitalter",
+  "length": "Länge",
+  "diet": "Ernährung",
+  "fossilLocation": "Fundorte",
+  "nameMeaning": "Name bedeutet",
+  "source": "Quelle",
+  "selectedFrom": "{count} in der Rotation",
+  "groupPlacoderm": "Panzerfisch",
+  "groupLobeFinned": "Fleischflosser",
+  "groupRayFinned": "Strahlenflosser",
+  "groupCartilaginous": "Knorpelfisch",
+  "groupJawless": "Kieferloser Fisch",
+  "signature": "Silhouettenmerkmal",
+  "errorTitle": "Fisch konnte nicht geladen werden",
+  "imageFailed": "Fischbild konnte nicht geladen werden.",
+  "listFailed": "Fischliste konnte nicht geladen werden.",
+  "factsShown": "{shown} von {total} Fakten"
+}
